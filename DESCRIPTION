@@ -1,0 +1,30 @@
+Package: deepImp
+Type: Package
+Title: Imputation with deep learning methods
+Version: 1.0.0
+Authors@R: c(
+  person("Matthias", "Templ", email="matthias.templ@gmail.com", role = c("aut", "cre"), comment=c(ORCID="0000-0002-8638-5276")))
+Description: Imputation with deep learing methods such as neural nets. The theoretical basis for the methods implemented can be found in Templ (2020) <doi:XXX>.
+LazyData: TRUE
+ByteCompile: TRUE
+Depends:
+    R (>= 3.5)
+Suggests:
+    keras,tensorflow,VIM
+Imports:
+    utils,
+    stats,
+    graphics,
+    magrittr,
+    tools,
+    methods,
+    data.table
+    VIM (>= 4.7.0)
+License: GPL-2
+URL: https://bitbucket.org/matthias-da/deepimp/
+Collate:
+    'impNNet.r'
+    'impNNetCoDa.R'
+RoxygenNote: 7.0.0
+VignetteBuilder: knitr
+Encoding: UTF-8
