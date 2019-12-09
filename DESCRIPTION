@@ -12,18 +12,20 @@ Depends:
 Suggests:
     keras,tensorflow,VIM
 Imports:
+    keras,
     utils,
     stats,
     graphics,
     magrittr,
     tools,
     methods,
-    data.table
-    VIM (>= 4.7.0)
+    data.table,
+    VIM
 License: GPL-2
 URL: https://bitbucket.org/matthias-da/deepimp/
 Collate:
-    'impNNet.r'
+    'guessType.R'
+    'impNNet.R'
     'impNNetCoDa.R'
 RoxygenNote: 7.0.0
 VignetteBuilder: knitr

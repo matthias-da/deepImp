@@ -34,6 +34,7 @@
 #' @return the imputed data set
 #' @author Matthias Templ, Roberto Barbieri
 #' @keywords manip
+#' @export
 #' @examples
 #' 
 #' expenditures <- data.frame(
@@ -61,8 +62,6 @@
 #' expenditures_imp
 #' }
 #' 
-#' @export impNNet
-#' @export guessType
 impNNetCoDa <- function(x, initialize = "knna", dl = NULL, 
                     iterations = 2, eps = 1,
                     patience.val = 5, epochs = 10, 
