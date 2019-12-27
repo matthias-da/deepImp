@@ -1,18 +1,9 @@
 #' @title Imputation using neural networks
-#' @aliases impNNet guessType
-#' @rdname impNNet
-#' @description Imputation for numeric, nominal, binary and semi-continous variables 
+#' @rdname impNNetCoda
+#' @description Imputation of rounded zeros in compositional data 
 #' using neural networks.
-#' @details the scale of the variables plays a central role within the algorithm. 
-#' The usual data types in R, such as factor, numeric, ..., are extended. Internally, the algorithm relies on the 
-#' following types of variables: numeric (equals numeric in base R), mixed (semi-continuous variables), 
-#' binary (nominal variables with two categories), nominal (like factor, but excluding binary variables), 
-#' count (for count variables).
-#' If vartypes equals guess, then the variable scale types are estimated. 
-#' If verbose equals TRUE, the outcome of this estimation is printed to the console.
-#' 
+#' @details tbd
 #' @param x data.frame or matrix
-#' @param vartypes specify the scale of each variable as a vector. For further details see below.
 #' @param initialize initialization of missing values
 #' @param dl detection limit as vector of length ncol(x)
 #' @param iterations number of iterations for the whole chain
@@ -28,6 +19,7 @@
 #' @param verbose progress and additional information to be reported in the console (if TRUE)
 #' @importFrom keras callback_lambda keras_model_sequential layer_dense layer_batch_normalization layer_dropout compile optimizer_adam 
 #' @importFrom keras callback_early_stopping to_categorical fit %<-%
+#' @importFrom robCompositions impKNNa
 #' @importFrom magrittr %>%
 # importFrom robCompositions impKNNa pivotCoord pivotCoordInv adjustImputed
 # importFrom robCompositions expenditures

@@ -23,6 +23,13 @@
 #' be made available in future versions.
 #' @param optimizer the optimizer used, currently fixed to adam.
 #' @param loss loss measure.
+#' @param model_numeric if NULL, a predefined model for numeric variables is chosen. For the specification of a model, see 
+#' \code{\link[keras]{keras_model_sequential}}.
+#' @param model_binary if NULL, a predefined model for numeric variables is chosen. For the specification of a model, see 
+#' \code{\link[keras]{keras_model_sequential}}.
+#' @param model_nominal if NULL, a predefined model for numeric variables is chosen. For the specification of a model, see 
+#' \code{\link[keras]{keras_model_sequential}}.
+#' @param mi number of multiple imputations
 #' @param verbose progress and additional information to be reported in the console (if TRUE)
 #' @import VIM
 #' @import data.table
@@ -45,9 +52,12 @@
 impNNet <- function(x, vartypes = "guess", initialize = "knn", 
                     iterations = 2, eps = 1,
                     patience.val = 5, epochs = 10, 
-                    dropout = 0.1, dense = seq(1000, 100, 100), 
+                    dropout = 0.1, dense = seq(1000, 100, -100), 
                     optimizer = optimizer_adam(), loss = "mse",
-                    verbose = TRUE){
+                    model_numeric = NULL,
+                    model_binary = NULL,
+                    model_nominal = NULL,
+                    mi = 1, verbose = TRUE){
   ## check on parameters:
   if(!(class(x) %in% c("data.frame","data.table","tibble","tbl_df"))){
     stop(cat("class or x, ", class(x), " is not supported"))
@@ -82,7 +92,7 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
   print_dot_callback <- callback_lambda(
     on_epoch_end = function(epoch, logs) {
       if(verbose){
-        if (epoch %% 80 == 0) cat("\n number of epochs (out of ", epochs, ") ")
+        if (epoch %% 80 == 0) cat("\n   number of epochs (out of ", epochs, ") ")
         cat(".")
       }
     }
@@ -124,48 +134,82 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
   }
   
   ### Models
+  if(is.null(model_numeric)){
   build_model_numeric <- function() {
     
-    model <- keras_model_sequential() %>%
-      layer_dense(units = 1000, activation = "relu",
-                  input_shape = dim(train_data)[2]) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 900, activation = "relu") %>%
-      layer_dropout(dropout) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 800, activation = "relu") %>%
-      layer_dropout(dropout) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 700, activation = "relu") %>%
-      layer_dropout(dropout) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 600, activation = "relu") %>%
-      layer_dropout(dropout) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 500, activation = "relu") %>%
-      layer_dropout(dropout) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 400, activation = "relu") %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 300, activation = "relu") %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 200, activation = "relu") %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 100, activation = "relu") %>%
-      layer_dense(units = 1,  activation = "linear")
+    # model <- keras_model_sequential() %>%
+    #   layer_dense(units = 1000, activation = "relu",
+    #               input_shape = dim(train_data)[2]) %>%
+    #   layer_batch_normalization() %>%
+    #   layer_dense(units = 900, activation = "relu") %>%
+    #   layer_dropout(dropout) %>%
+    #   layer_batch_normalization() %>%
+    #   layer_dense(units = 800, activation = "relu") %>%
+    #   layer_dropout(dropout) %>%
+    #   layer_batch_normalization() %>%
+    #   layer_dense(units = 700, activation = "relu") %>%
+    #   layer_dropout(dropout) %>%
+    #   layer_batch_normalization() %>%
+    #   layer_dense(units = 600, activation = "relu") %>%
+    #   layer_dropout(dropout) %>%
+    #   layer_batch_normalization() %>%
+    #   layer_dense(units = 500, activation = "relu") %>%
+    #   layer_dropout(dropout) %>%
+    #   layer_batch_normalization() %>%
+    #   layer_dense(units = 400, activation = "relu") %>%
+    #   layer_batch_normalization() %>%
+    #   layer_dense(units = 300, activation = "relu") %>%
+    #   layer_batch_normalization() %>%
+    #   layer_dense(units = 200, activation = "relu") %>%
+    #   layer_batch_normalization() %>%
+    #   layer_dense(units = 100, activation = "relu") %>%
+    #   layer_dense(units = 1,  activation = "linear") 
+   
     
+   model <- keras_model_sequential() %>%
+     layer_dense(units = dense[1], activation = "relu",
+                        input_shape = dim(train_data)[2]) %>% 
+     layer_dropout(dropout) %>%
+     layer_batch_normalization()%>%
+     layer_dense(units = dense[2], activation = "relu") %>%
+     layer_dropout(dropout) %>%
+     layer_batch_normalization() %>%
+     layer_dense(units = dense[3], activation = "relu") %>%
+     layer_dropout(dropout) %>%
+     layer_batch_normalization()  %>%  
+     layer_dense(units = dense[4], activation = "relu") %>%
+     layer_dropout(dropout) %>%
+     layer_batch_normalization()  %>%  
+     layer_dense(units = dense[5], activation = "relu") %>%
+     layer_dropout(dropout) %>%
+     layer_batch_normalization() %>%
+     layer_dense(units = dense[6], activation = "relu") %>%
+     layer_batch_normalization() %>%
+     layer_dense(units = dense[7], activation = "relu") %>%
+     layer_batch_normalization()  %>%  
+     layer_dense(units = dense[8], activation = "relu") %>%
+     layer_batch_normalization() %>%    
+     layer_dense(units = dense[9], activation = "relu") %>%
+     layer_batch_normalization()  %>%
+     layer_dense(units = dense[10], activation = "relu") %>%
+     layer_batch_normalization()  %>% 
+     layer_dense(units = 1,  activation = "linear") 
+   
     model %>% compile(
       loss = loss,
       optimizer = optimizer_adam(),
       metrics = list("mean_absolute_error")
     )
   }
+  }
   
+  if(is.null(model_binary)){
   build_model_binary <- function() {
     
     model <- keras_model_sequential() %>%
       layer_dense(units = 1000, activation = "relu",
                   input_shape = dim(train_data)[2]) %>%
+      layer_dropout(dropout) %>%
       layer_batch_normalization() %>%
       layer_dense(units = 900, activation = "relu") %>%
       layer_dropout(dropout) %>%
@@ -197,27 +241,30 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
       metrics = list("accuracy")
     )
   }
+  }
   
+  if(is.null(model_nominal)){
   build_model_nominal <- function() {
     
     model <- keras_model_sequential() %>%
       layer_dense(units = 1000, activation = "relu",
                   input_shape = dim(train_data)[2]) %>%
+      layer_dropout(dropout) %>%
       layer_batch_normalization() %>%
       layer_dense(units = 900, activation = "relu") %>%
-      layer_dropout(0.1) %>%
+      layer_dropout(dropout) %>%
       layer_batch_normalization() %>%
       layer_dense(units = 800, activation = "relu") %>%
-      layer_dropout(0.1) %>%
+      layer_dropout(dropout) %>%
       layer_batch_normalization() %>%
       layer_dense(units = 700, activation = "relu") %>%
-      layer_dropout(0.1) %>%
+      layer_dropout(dropout) %>%
       layer_batch_normalization() %>%
       layer_dense(units = 600, activation = "relu") %>%
-      layer_dropout(0.1) %>%
+      layer_dropout(dropout) %>%
       layer_batch_normalization() %>%
       layer_dense(units = 500, activation = "relu") %>%
-      layer_dropout(0.1) %>%
+      layer_dropout(dropout) %>%
       layer_batch_normalization() %>%
       layer_dense(units = 400, activation = "relu") %>%
       layer_batch_normalization() %>%
@@ -237,10 +284,20 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
       metrics = list("accuracy")
     )
   }
+  }
   
   # setting limits for "runtime"
   early_stop <- callback_early_stopping(monitor = "val_loss", patience = patience.val)
   
+  x.imp.start <- x.filled
+  ### Loop over mi
+  results <- list()
+  for(mis in 1:mi){
+  if(verbose & mi > 1){
+    cat("\n\n---")
+    cat("\nmultiple imputation", mis, "\n---")
+  }
+  x.imp <- x.filled <- x.imp.start
   ### Loop over iterations
   changes <- numeric(iterations)
   for(iter in 1:iterations){
@@ -250,7 +307,7 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
   {
     for(j in 1:ncol(x)){
       if(sum(is.na(x[, j])) > 0){
-        if(verbose) cat("\nimputing variable ", j,"/",ncol(x))
+        if(verbose) cat("\n  imputing variable ", j,"/",ncol(x))
 
           train_data <- x.filled[!no.loc.mat[, j], -j]
           train_labels <- x.filled[!no.loc.mat[,j], j]
@@ -320,7 +377,7 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
  
           
         if(vartypes[j] %in% c("nominal","binary")){   
-          if(vartypes[j] == "binary") browser()
+         # if(vartypes[j] == "binary") browser()
             
             # setting limits for "runtime"
             early_stop <- callback_early_stopping(monitor = "val_loss", patience = patience.val)
@@ -378,8 +435,12 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
       break()
     }
    } # end loop over iter
-  
-  return(x.imp)
+   results[[mis]] <- x.imp
+  } # end loop over mi
+  if(mi == 1){
+    results <- data.frame(results[[1]])
+  }
+  return(results)
   
 }
 improvement <- function(x, y, na.orig){
