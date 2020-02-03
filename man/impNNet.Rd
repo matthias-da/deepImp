@@ -14,9 +14,13 @@ impNNet(
   patience.val = 5,
   epochs = 10,
   dropout = 0.1,
-  dense = seq(1000, 100, 100),
+  dense = seq(1000, 100, -100),
   optimizer = optimizer_adam(),
   loss = "mse",
+  model_numeric = NULL,
+  model_binary = NULL,
+  model_nominal = NULL,
+  mi = 1,
   verbose = TRUE
 )
 }
@@ -43,6 +47,17 @@ be made available in future versions.}
 \item{optimizer}{the optimizer used, currently fixed to adam.}
 
 \item{loss}{loss measure.}
+
+\item{model_numeric}{if NULL, a predefined model for numeric variables is chosen. For the specification of a model, see 
+\code{\link[keras]{keras_model_sequential}}.}
+
+\item{model_binary}{if NULL, a predefined model for numeric variables is chosen. For the specification of a model, see 
+\code{\link[keras]{keras_model_sequential}}.}
+
+\item{model_nominal}{if NULL, a predefined model for numeric variables is chosen. For the specification of a model, see 
+\code{\link[keras]{keras_model_sequential}}.}
+
+\item{mi}{number of multiple imputations}
 
 \item{verbose}{progress and additional information to be reported in the console (if TRUE)}
 }

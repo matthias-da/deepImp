@@ -58,6 +58,8 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
                     model_binary = NULL,
                     model_nominal = NULL,
                     mi = 1, verbose = TRUE){
+  ## check speed 
+  ptm <- proc.time()
   ## check on parameters:
   if(!(class(x) %in% c("data.frame","data.table","tibble","tbl_df"))){
     stop(cat("class or x, ", class(x), " is not supported"))
@@ -330,19 +332,31 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
           if(any(facs)){
             vars <- (1:(ncol(train_data)))[facs]
             nc <- max(c(unique(train_data[,vars[1]])),
-                      c(unique(test_data[,vars[1]]))) + 1
-            binmat_train <- to_categorical(train_data[,vars[1]], num_classes = nc)
-            binmat_test <- to_categorical(test_data[,vars[1]], num_classes = nc)           
+                      c(unique(test_data[,vars[1]]))) #+ 1
+            td <- data.frame("labels" = train_data[,vars[1]])
+            td2 <- data.frame("labels" = test_data[,vars[1]])
+#            binmat_train <- to_categorical(train_data[,vars[1]], num_classes = nc)
+#            binmat_test <- to_categorical(test_data[,vars[1]], num_classes = nc)   
+            binmat_train <- model.matrix(~labels-1, data = td)
+            binmat_test <- model.matrix(~labels-1, data = td2)
             if(sum(facs) > 1){
               for(i in (1:ncol(train_data))[facs]){
                 nc <- max(c(length(unique(train_data[,i])),
                             length(unique(test_data[,i])))) + 1
+#                binmat_train <- cbind(binmat_train, 
+#                                      to_categorical(train_data[,i], num_classes = nc))
+#                binmat_test <- cbind(binmat_test, 
+#                                     to_categorical(test_data[,i], num_classes = nc))
+                tdi <- data.frame("labels" = train_data[,i])
+                tdi2 <- data.frame("labels" = test_data[,i])
                 binmat_train <- cbind(binmat_train, 
-                                      to_categorical(train_data[,i], num_classes = nc))
-                binmat_test <- cbind(binmat_test, to_categorical(test_data[,i], num_classes = nc))
+                                      model.matrix(~labels-1, data = tdi))
+                binmat_test <- cbind(binmat_test, 
+                                      model.matrix(~labels-1, data = tdi2))               
               }
             }
             train_data <- train_data[, !facs]
+            browser()
             train_data <- cbind(train_data, binmat_train)
             test_data <- test_data[, !facs]
             test_data <- cbind(test_data, binmat_test)            
@@ -388,11 +402,14 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
             if(vartypes[j] == "nominal"){
               model <- build_model_nominal()
               # fitting on model
-              nc <- max(c(ncol(to_categorical(train_labels)), 
-                          ncol(to_categorical(test_labels))))
+              #nc <- max(c(ncol(to_categorical(train_labels)), 
+              #            ncol(to_categorical(train_labels)))) 
+              #  to_categorical(train_labels, num_classes = nc)
+              tm <- data.frame("labels" = train_labels)
               history <- model %>% fit(
                 as.matrix(train_data),
-                to_categorical(train_labels, num_classes = nc),
+                #to_categorical(train_labels, num_classes = nc),
+                model.matrix(~ labels-1, data = tm),
                 epochs = epochs,
                 validation_split = 0.2,
                 verbose = 0,
@@ -418,7 +435,10 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
               x.imp[(no.loc.mat[,j]),j] <- round(test_predictions)[,2]
             }
             if(vartypes[j] == "nominal"){
-              x.imp[(no.loc.mat[,j]),j] <- apply(test_predictions,1,which.max)
+              bestlev <- apply(test_predictions,1,which.max)
+              bestlev <- levels(train_labels)[bestlev]
+              x.imp[(no.loc.mat[,j]),j] <- bestlev
+#              x.imp[(no.loc.mat[,j]),j] <- apply(test_predictions,1,which.max)
             }
             x.filled <- x.imp
           }
@@ -440,6 +460,8 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
   if(mi == 1){
     results <- data.frame(results[[1]])
   }
+  p <- proc.time() - ptm
+  attr(p[1], which = "proctime")
   return(results)
   
 }
