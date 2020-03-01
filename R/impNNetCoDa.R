@@ -54,12 +54,15 @@
 #' expenditures_imp
 #' }
 #' 
-impNNetCoDa <- function(x, initialize = "knna", dl = NULL, 
+impNNetCoDa <- function(x, initialize = "knna", 
+                    coda = TRUE,
+                    dl = NULL, 
                     iterations = 2, eps = 1,
                     patience.val = 5, epochs = 10, 
                     dropout = 0.1, dense = seq(1000, 100, 100), 
                     optimizer = optimizer_adam(), loss = "mse",
-                    correction = "no correction", verbose = TRUE){
+                    correction = FALSE, 
+                    verbose = TRUE){
   ## check on parameters:
   if(!(class(x) %in% c("data.frame","data.table","tibble","tbl_df"))){
     stop(cat("class or x, ", class(x), " is not supported"))
@@ -178,11 +181,16 @@ impNNetCoDa <- function(x, initialize = "knna", dl = NULL,
         x_neworder <- cbind(x_imp[, j], x_imp[, -j])
         x_neworder[x_neworder < 2 * .Machine$double.eps] <- 2 * 
           .Machine$double.eps
-        x_ilr <- robCompositions::pivotCoord(x_neworder)
-        phi_ilr <- robCompositions::pivotCoord(cbind(rep(dl[j], n), x_neworder[, -1, drop = FALSE]))[, 1]
-        if (any(is.na(phi_ilr))){
-          stop("a phi_ilr value is NA, please check your data.")
-        } 
+        if(coda){
+          x_ilr <- robCompositions::pivotCoord(x_neworder)
+          phi_ilr <- robCompositions::pivotCoord(cbind(rep(dl[j], n), x_neworder[, -1, drop = FALSE]))[, 1]
+          if (any(is.na(phi_ilr))){
+            stop("a phi_ilr value is NA, please check your data.")
+          } 
+        } else {
+          x_ilr <- x_neworder
+          phi_ilr <- rep(dl[j], n)
+        }
         train_data <- as.matrix(x_ilr[!no.loc.mat[, j], -1, drop = FALSE])
         train_labels <- as.matrix(x_ilr[!no.loc.mat[, j], 1, drop = FALSE])
         test_data <- as.matrix(x_ilr[no.loc.mat[, j], -1, drop = FALSE])
@@ -219,11 +227,13 @@ impNNetCoDa <- function(x, initialize = "knna", dl = NULL,
           if (any(is.na(test_predictions)) || any(test_predictions == "Inf")) 
             stop("Problems in ilr because of infinite or NA estimates")
           x_ilr[(no.loc.mat[,j]), 1] <- ifelse(test_predictions > phi_ilr[no.loc.mat[, j]], phi_ilr[no.loc.mat[, j]], test_predictions)
+          if(coda){
           x_ilr_back <- robCompositions::pivotCoordInv(x_ilr)
           x_ilr_back <- robCompositions::adjustImputed(x_ilr_back, x_neworder, cbind(no.loc.mat[, j], no.loc.mat[, -j]))
           x_imp[(no.loc.mat[,j]), j] <- x_ilr_back[(no.loc.mat[,j]), 1]
-          browser()
-         
+          } else{
+            x_imp[(no.loc.mat[,j]), j] <- x_ilr[(no.loc.mat[,j]), 1]
+          }
           x.filled <- x_imp
         }
 

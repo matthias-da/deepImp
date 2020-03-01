@@ -7,6 +7,7 @@
 impNNetCoDa(
   x,
   initialize = "knna",
+  coda = TRUE,
   dl = NULL,
   iterations = 2,
   eps = 1,
@@ -16,7 +17,7 @@ impNNetCoDa(
   dense = seq(1000, 100, 100),
   optimizer = optimizer_adam(),
   loss = "mse",
-  correction = "no correction",
+  correction = FALSE,
   verbose = TRUE
 )
 }

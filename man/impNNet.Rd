@@ -17,6 +17,7 @@ impNNet(
   dense = seq(1000, 100, -100),
   optimizer = optimizer_adam(),
   loss = "mse",
+  activation = "relu",
   model_numeric = NULL,
   model_binary = NULL,
   model_nominal = NULL,

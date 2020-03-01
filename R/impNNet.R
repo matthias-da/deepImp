@@ -54,6 +54,7 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
                     patience.val = 5, epochs = 10, 
                     dropout = 0.1, dense = seq(1000, 100, -100), 
                     optimizer = optimizer_adam(), loss = "mse",
+                    activation = "relu",
                     model_numeric = NULL,
                     model_binary = NULL,
                     model_nominal = NULL,
@@ -140,60 +141,60 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
   build_model_numeric <- function() {
     
     # model <- keras_model_sequential() %>%
-    #   layer_dense(units = 1000, activation = "relu",
+    #   layer_dense(units = 1000, activation = activation,
     #               input_shape = dim(train_data)[2]) %>%
     #   layer_batch_normalization() %>%
-    #   layer_dense(units = 900, activation = "relu") %>%
+    #   layer_dense(units = 900, activation = activation) %>%
     #   layer_dropout(dropout) %>%
     #   layer_batch_normalization() %>%
-    #   layer_dense(units = 800, activation = "relu") %>%
+    #   layer_dense(units = 800, activation = activation) %>%
     #   layer_dropout(dropout) %>%
     #   layer_batch_normalization() %>%
-    #   layer_dense(units = 700, activation = "relu") %>%
+    #   layer_dense(units = 700, activation = activation) %>%
     #   layer_dropout(dropout) %>%
     #   layer_batch_normalization() %>%
-    #   layer_dense(units = 600, activation = "relu") %>%
+    #   layer_dense(units = 600, activation = activation) %>%
     #   layer_dropout(dropout) %>%
     #   layer_batch_normalization() %>%
-    #   layer_dense(units = 500, activation = "relu") %>%
+    #   layer_dense(units = 500, activation = activation) %>%
     #   layer_dropout(dropout) %>%
     #   layer_batch_normalization() %>%
-    #   layer_dense(units = 400, activation = "relu") %>%
+    #   layer_dense(units = 400, activation = activation) %>%
     #   layer_batch_normalization() %>%
-    #   layer_dense(units = 300, activation = "relu") %>%
+    #   layer_dense(units = 300, activation = activation) %>%
     #   layer_batch_normalization() %>%
-    #   layer_dense(units = 200, activation = "relu") %>%
+    #   layer_dense(units = 200, activation = activation) %>%
     #   layer_batch_normalization() %>%
-    #   layer_dense(units = 100, activation = "relu") %>%
+    #   layer_dense(units = 100, activation = activation) %>%
     #   layer_dense(units = 1,  activation = "linear") 
    
     
    model <- keras_model_sequential() %>%
-     layer_dense(units = dense[1], activation = "relu",
+     layer_dense(units = dense[1], activation = activation,
                         input_shape = dim(train_data)[2]) %>% 
      layer_dropout(dropout) %>%
      layer_batch_normalization()%>%
-     layer_dense(units = dense[2], activation = "relu") %>%
+     layer_dense(units = dense[2], activation = activation) %>%
      layer_dropout(dropout) %>%
      layer_batch_normalization() %>%
-     layer_dense(units = dense[3], activation = "relu") %>%
+     layer_dense(units = dense[3], activation = activation) %>%
      layer_dropout(dropout) %>%
      layer_batch_normalization()  %>%  
-     layer_dense(units = dense[4], activation = "relu") %>%
+     layer_dense(units = dense[4], activation = activation) %>%
      layer_dropout(dropout) %>%
      layer_batch_normalization()  %>%  
-     layer_dense(units = dense[5], activation = "relu") %>%
+     layer_dense(units = dense[5], activation = activation) %>%
      layer_dropout(dropout) %>%
      layer_batch_normalization() %>%
-     layer_dense(units = dense[6], activation = "relu") %>%
+     layer_dense(units = dense[6], activation = activation) %>%
      layer_batch_normalization() %>%
-     layer_dense(units = dense[7], activation = "relu") %>%
+     layer_dense(units = dense[7], activation = activation) %>%
      layer_batch_normalization()  %>%  
-     layer_dense(units = dense[8], activation = "relu") %>%
+     layer_dense(units = dense[8], activation = activation) %>%
      layer_batch_normalization() %>%    
-     layer_dense(units = dense[9], activation = "relu") %>%
+     layer_dense(units = dense[9], activation = activation) %>%
      layer_batch_normalization()  %>%
-     layer_dense(units = dense[10], activation = "relu") %>%
+     layer_dense(units = dense[10], activation = activation) %>%
      layer_batch_normalization()  %>% 
      layer_dense(units = 1,  activation = "linear") 
    
@@ -209,32 +210,32 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
   build_model_binary <- function() {
     
     model <- keras_model_sequential() %>%
-      layer_dense(units = 1000, activation = "relu",
+      layer_dense(units = 1000, activation = activation,
                   input_shape = dim(train_data)[2]) %>%
       layer_dropout(dropout) %>%
       layer_batch_normalization() %>%
-      layer_dense(units = 900, activation = "relu") %>%
+      layer_dense(units = 900, activation = activation) %>%
       layer_dropout(dropout) %>%
       layer_batch_normalization() %>%
-      layer_dense(units = 800, activation = "relu") %>%
+      layer_dense(units = 800, activation = activation) %>%
       layer_dropout(dropout) %>%
       layer_batch_normalization() %>%
-      layer_dense(units = 700, activation = "relu") %>%
+      layer_dense(units = 700, activation = activation) %>%
       layer_dropout(dropout) %>%
       layer_batch_normalization() %>%
-      layer_dense(units = 600, activation = "relu") %>%
+      layer_dense(units = 600, activation = activation) %>%
       layer_dropout(dropout) %>%
       layer_batch_normalization() %>%
-      layer_dense(units = 500, activation = "relu") %>%
+      layer_dense(units = 500, activation = activation) %>%
       layer_dropout(dropout) %>%
       layer_batch_normalization() %>%
-      layer_dense(units = 400, activation = "relu") %>%
+      layer_dense(units = 400, activation = activation) %>%
       layer_batch_normalization() %>%
-      layer_dense(units = 300, activation = "relu") %>%
+      layer_dense(units = 300, activation = activation) %>%
       layer_batch_normalization() %>%
-      layer_dense(units = 200, activation = "relu") %>%
+      layer_dense(units = 200, activation = activation) %>%
       layer_batch_normalization() %>%
-      layer_dense(units = 100, activation = "relu") %>%
+      layer_dense(units = 100, activation = activation) %>%
       layer_dense(units = 2,  activation = "softmax")
     
     model %>% compile(
@@ -249,32 +250,32 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
   build_model_nominal <- function() {
     
     model <- keras_model_sequential() %>%
-      layer_dense(units = 1000, activation = "relu",
+      layer_dense(units = 1000, activation = activation,
                   input_shape = dim(train_data)[2]) %>%
       layer_dropout(dropout) %>%
       layer_batch_normalization() %>%
-      layer_dense(units = 900, activation = "relu") %>%
+      layer_dense(units = 900, activation = activation) %>%
       layer_dropout(dropout) %>%
       layer_batch_normalization() %>%
-      layer_dense(units = 800, activation = "relu") %>%
+      layer_dense(units = 800, activation = activation) %>%
       layer_dropout(dropout) %>%
       layer_batch_normalization() %>%
-      layer_dense(units = 700, activation = "relu") %>%
+      layer_dense(units = 700, activation = activation) %>%
       layer_dropout(dropout) %>%
       layer_batch_normalization() %>%
-      layer_dense(units = 600, activation = "relu") %>%
+      layer_dense(units = 600, activation = activation) %>%
       layer_dropout(dropout) %>%
       layer_batch_normalization() %>%
-      layer_dense(units = 500, activation = "relu") %>%
+      layer_dense(units = 500, activation = activation) %>%
       layer_dropout(dropout) %>%
       layer_batch_normalization() %>%
-      layer_dense(units = 400, activation = "relu") %>%
+      layer_dense(units = 400, activation = activation) %>%
       layer_batch_normalization() %>%
-      layer_dense(units = 300, activation = "relu") %>%
+      layer_dense(units = 300, activation = activation) %>%
       layer_batch_normalization() %>%
-      layer_dense(units = 200, activation = "relu") %>%
+      layer_dense(units = 200, activation = activation) %>%
       layer_batch_normalization() %>%
-      layer_dense(units = 100, activation = "relu") %>%
+      layer_dense(units = 100, activation = activation) %>%
       #layer_dense(units = ncol(x.data$train$y),  activation = "softmax")
       layer_dense(units = length(levels(train_labels)),  activation = "softmax")
   #    layer_dense(units = length(levels(train_labels)),  activation = "softmax")
@@ -311,14 +312,14 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
       if(sum(is.na(x[, j])) > 0){
         if(verbose) cat("\n  imputing variable ", j,"/",ncol(x))
 
-          train_data <- x.filled[!no.loc.mat[, j], -j]
+          train_data <- x.filled[!no.loc.mat[, j], -j, drop = FALSE]
           train_labels <- x.filled[!no.loc.mat[,j], j]
-          test_data <- x.filled[no.loc.mat[,j], -j]
+          test_data <- x.filled[no.loc.mat[,j], -j, drop = FALSE]
           test_labels <- x.filled[no.loc.mat[,j], j] 
           
           # Normalize training data (only non-factors)
           facs <- vartypes[-j] %in% c("factor","nominal","binary")
-          trainscale <- scale(train_data[, !facs])
+          trainscale <- scale(train_data[, !facs, drop = FALSE])
           train_data[, !facs] <- trainscale
           
           # Use means and standard deviations from training set to normalize test set
@@ -356,9 +357,8 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
               }
             }
             train_data <- train_data[, !facs]
-            browser()
             train_data <- cbind(train_data, binmat_train)
-            test_data <- test_data[, !facs]
+            test_data <- test_data[, !facs, drop = FALSE]
             test_data <- cbind(test_data, binmat_test)            
           }
         

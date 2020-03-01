@@ -21,6 +21,7 @@ Imports:
     methods,
     data.table,
     robCompositions,
+    tensorflow,
     VIM
 License: GPL-2
 URL: https://bitbucket.org/matthias-da/deepimp/
