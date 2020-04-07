@@ -302,7 +302,7 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
   }
   x.imp <- x.filled <- x.imp.start
   ### Loop over iterations
-  changes <- numeric(iterations)
+  changes <- iterations
   for(iter in 1:iterations){
     x.imp.old <- x.imp
     if(verbose) cat("\n\niteration (", iter, "/", iterations,")\n")

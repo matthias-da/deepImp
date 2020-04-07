@@ -6,6 +6,7 @@
 #' @param x data.frame or matrix
 #' @param initialize initialization of missing values
 #' @param dl detection limit as vector of length ncol(x)
+#' @param label label of the rounded zeros in x (default: NA)
 #' @param iterations number of iterations for the whole chain
 #' @param eps if mean changes over cells is less than eps, the algorithmn will stopp
 #' @param patience.val max number of epochs on which we would like to see no improvement
@@ -54,20 +55,25 @@
 #' expenditures_imp
 #' }
 #' 
-impNNetCoDa <- function(x, initialize = "knna", 
+impNNetCoDa <- function(x, initialize = "kNNa", 
                     coda = TRUE,
                     dl = NULL, 
-                    iterations = 2, eps = 1,
-                    patience.val = 5, epochs = 10, 
-                    dropout = 0.1, dense = seq(1000, 100, 100), 
-                    optimizer = optimizer_adam(), loss = "mse",
+                    label = NA,
+                    iterations = 2, 
+                    eps = 1,
+                    patience.val = 5, 
+                    epochs = 10, 
+                    dropout = 0.1, 
+                    dense = seq(1000, 100, 100), 
+                    optimizer = optimizer_adam(), 
+                    loss = "mse",
                     correction = FALSE, 
                     verbose = TRUE){
   ## check on parameters:
   if(!(class(x) %in% c("data.frame","data.table","tibble","tbl_df"))){
     stop(cat("class or x, ", class(x), " is not supported"))
   }
-  if(!(initialize %in% c("kNN","kNNa","kNNA","impKNNa","knna","knn","mean","hotdeck"))){
+  if(!(initialize %in% c("kNN","kNNa","kNNA","impKNNa","knna","knn","mean","hotdeck","em"))){
     stop(cat("initialing method ", initialize, "is not supported"))
   }
   
@@ -82,6 +88,9 @@ impNNetCoDa <- function(x, initialize = "knna",
   )
   
   ### Remembering where NA's are ###
+  if(!is.na(label)){
+    x[x == label] <- NA
+  }
   no.loc.mat <- is.na(x)
   
   ### initializing NA's ###
@@ -94,6 +103,13 @@ impNNetCoDa <- function(x, initialize = "knna",
       x.filled <- robCompositions::impKNNa(x)$xImp
       x_imp <- x.filled # dataset to fill in fitted values
     }
+    if(initialize == "em"){
+      suppressWarnings(x.imp <- tryCatch(lrEM(x, 
+                                              dl=qu, 
+                                              label=0), 
+                                         error = function(e) m))
+      
+    }    
     if(initialize == "mean"){
       m <- 1
       xmean <- x
@@ -226,14 +242,20 @@ impNNetCoDa <- function(x, initialize = "knna",
           # }
           if (any(is.na(test_predictions)) || any(test_predictions == "Inf")) 
             stop("Problems in ilr because of infinite or NA estimates")
-          x_ilr[(no.loc.mat[,j]), 1] <- ifelse(test_predictions > phi_ilr[no.loc.mat[, j]], phi_ilr[no.loc.mat[, j]], test_predictions)
+          x_ilr[(no.loc.mat[,j]), 1] <- ifelse(test_predictions > phi_ilr[no.loc.mat[, j]], phi_ilr[no.loc.mat[, j]] - 0.001, test_predictions)
           if(coda){
           x_ilr_back <- robCompositions::pivotCoordInv(x_ilr)
-          x_ilr_back <- robCompositions::adjustImputed(x_ilr_back, x_neworder, cbind(no.loc.mat[, j], no.loc.mat[, -j]))
+          x_ilr_back <- robCompositions::adjustImputed(x_ilr_back, x_neworder, 
+                                                       cbind(no.loc.mat[, j], 
+                                                             no.loc.mat[, -j]))
           x_imp[(no.loc.mat[,j]), j] <- x_ilr_back[(no.loc.mat[,j]), 1]
           } else{
             x_imp[(no.loc.mat[,j]), j] <- x_ilr[(no.loc.mat[,j]), 1]
           }
+ #         x_imp <- setToDL(x_imp, dl, no.loc.mat)
+       #   print(colnames(x_imp))
+       #   print(checkToDL(x_imp, dl, no.loc.mat, j))
+          
           x.filled <- x_imp
         }
 
@@ -256,4 +278,21 @@ impNNetCoDa <- function(x, initialize = "knna",
 improvement <- function(x, y, na.orig){
   change <- sum(abs(x - y)) / sum(na.orig)
   return(change)
+}
+
+setToDL <- function(x, dl, indexNA){
+  check <- logical(ncol(x))
+  su <- 0
+  for(i in 1:ncol(x)){
+    critvals <- x[indexNA[,i],i] > dl[i]
+    x[critvales, i] <- dl[i]
+  }
+  return(x)
+}
+
+checkToDL <- function(x, dl, indexNA, j){
+  check <- logical(ncol(x))
+  critvals <- x[indexNA[,j],j] > dl[j]
+  su <- sum(critvals)
+  return(ifelse(su == 0, "ok", "values above dl"))
 }
