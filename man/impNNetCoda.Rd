@@ -6,9 +6,10 @@
 \usage{
 impNNetCoDa(
   x,
-  initialize = "knna",
+  initialize = "kNNa",
   coda = TRUE,
   dl = NULL,
+  label = NA,
   iterations = 2,
   eps = 1,
   patience.val = 5,
@@ -27,6 +28,8 @@ impNNetCoDa(
 \item{initialize}{initialization of missing values}
 
 \item{dl}{detection limit as vector of length ncol(x)}
+
+\item{label}{label of the rounded zeros in x (default: NA)}
 
 \item{iterations}{number of iterations for the whole chain}
 

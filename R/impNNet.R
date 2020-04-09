@@ -74,7 +74,7 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
     vartypes <- guessType(x)$type
     if(verbose) cat("\ntype of variables for further use\n", vartypes)
   } else {
-    stopifnot(!is.vector(guessType) & !(length(vartypes) == ncol(x)))
+    stopifnot(is.vector(vartypes) & (length(vartypes) == ncol(x)))
   }
   
   ## binary vectors must be stored as 0/1
@@ -468,6 +468,7 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
 improvement <- function(x, y, na.orig){
   facs <- unlist(lapply(x, class)) %in% c("factor","nominal","binary")
   s_num <- sum(abs(x[, !facs] - y[, !facs])) 
+  # Error in x[, !facs] : (subscript) logical subscript too long
   if(any(facs)){
     s_fac <- sum(x[, facs] == y[, facs])
   } else {

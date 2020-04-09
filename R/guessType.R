@@ -37,7 +37,7 @@ guessType <- function(x){
   }
   
   checkNominal <- function(x, constant = 0.2){
-    if(length(table(x)) < length(x) * 1/10 & !any(x[!is.na(x)] %% 1 > .Machine$double.eps)){
+    if(length(table(x)) < length(x) * 1/13 & !any(x[!is.na(x)] %% 1 > .Machine$double.eps)){
       return(TRUE)
     } else {
       return(FALSE)

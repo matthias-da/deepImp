@@ -262,7 +262,7 @@ impNNetCoDa <- function(x, initialize = "kNNa",
       } 
      } # end loop over all columns
 
-    changes[iter] <- improvement(x.imp.old, x_imp, no.loc.mat)
+    changes[iter] <- improvementCoDa(x.imp.old, x_imp, no.loc.mat)
 
     if(verbose) cat("\nmean of relative differences to previous iteration: ", changes[iter])
     if(changes[iter] < eps & iter < iterations){
@@ -275,7 +275,7 @@ impNNetCoDa <- function(x, initialize = "kNNa",
   
 }
 
-improvement <- function(x, y, na.orig){
+improvementCoDa <- function(x, y, na.orig){
   change <- sum(abs(x - y)) / sum(na.orig)
   return(change)
 }
