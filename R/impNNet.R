@@ -77,6 +77,10 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
     stopifnot(is.vector(vartypes) & (length(vartypes) == ncol(x)))
   }
   
+  if(length(vartypes == "compositional") > 2){
+    indexComp <- vartypes == "compositional"
+  }
+  
   ## binary vectors must be stored as 0/1
   bin_index <- vartypes == "binary"
   if(any(bin_index)){
@@ -283,6 +287,7 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
     
     model %>% compile(
       loss = "categorical_crossentropy",
+     # loss = "sparse_categorical_crossentropy",
       optimizer = optimizer_adam(),
       metrics = list("accuracy")
     )
@@ -300,6 +305,12 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
     cat("\n\n---")
     cat("\nmultiple imputation", mis, "\n---")
   }
+  # coda vars:
+  if(sum(indexComp) > 1){
+    cen <- robCompositions::cenLR(x.imp[, indexComp])
+    x.imp[, indexComp] <- cen$xclr
+  }  
+    
   x.imp <- x.filled <- x.imp.start
   ### Loop over iterations
   changes <- iterations
@@ -362,7 +373,7 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
             test_data <- cbind(test_data, binmat_test)            
           }
         
-         if(vartypes[j] %in% c("numeric","count")){   
+         if(vartypes[j] %in% c("numeric","count","compositional")){   
            # setting limits for "runtime"
            early_stop <- callback_early_stopping(monitor = "val_loss", patience = patience.val)
            if(exists("model")){
@@ -460,6 +471,15 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
   if(mi == 1){
     results <- data.frame(results[[1]])
   }
+  # coda:
+  if(sum(indexComp) > 1){
+    cen_tmp <- list()
+    cen_tmp$x.clr <- x.imp[, indexComp]
+    cen_tmp$gm <- cen$gm
+    class(cen_tmp) <- "clr"
+    cen_inv <- robCompositions::cenLRinv(cen_tmp)
+    x.imp[, indexComp] <- cen_inv
+  }  
   p <- proc.time() - ptm
   attr(p[1], which = "proctime")
   return(results)
