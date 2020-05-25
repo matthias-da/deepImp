@@ -242,7 +242,16 @@ impNNetCoDa <- function(x, initialize = "kNNa",
           # }
           if (any(is.na(test_predictions)) || any(test_predictions == "Inf")) 
             stop("Problems in ilr because of infinite or NA estimates")
-          x_ilr[(no.loc.mat[,j]), 1] <- ifelse(test_predictions > phi_ilr[no.loc.mat[, j]], phi_ilr[no.loc.mat[, j]] - 0.001, test_predictions)
+          if(correction == "simple"){
+            x_ilr[(no.loc.mat[,j]), 1] <- ifelse(test_predictions > phi_ilr[no.loc.mat[, j]], phi_ilr[no.loc.mat[, j]] - 0.001, test_predictions)
+          } else{
+            s <- sd(x_ilr[, 1])
+            num <- dnorm(phi_ilr[no.loc.mat[, j]] - test_predictions / s)
+            denum <- pnorm(phi_ilr[no.loc.mat[, j]] - test_predictions / s) 
+            lambda <-  num / denum
+            x_ilr[(no.loc.mat[,j]), 1] <- 
+              test_predictions - s * lambda
+          }
           if(coda){
           x_ilr_back <- robCompositions::pivotCoordInv(x_ilr)
           x_ilr_back <- robCompositions::adjustImputed(x_ilr_back, x_neworder, 
