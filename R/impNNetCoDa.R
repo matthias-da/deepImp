@@ -51,6 +51,7 @@
 #' \dontrun{
 #' library(keras)
 #' library(tensorflow)
+#' data(expenditures, package = "robCompositions")
 #' expenditures_imp <- impNNetCoDa(expenditures)
 #' expenditures_imp
 #' }
