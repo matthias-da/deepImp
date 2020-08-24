@@ -51,8 +51,9 @@
 #' \dontrun{
 #' library(keras)
 #' library(tensorflow)
-#' data(expenditures, package = "robCompositions")
+#' #data(expenditures, package = "robCompositions")
 #' expenditures_imp <- impNNetCoDa(expenditures)
+
 #' expenditures_imp
 #' }
 #' 
@@ -74,7 +75,7 @@ impNNetCoDa <- function(x, initialize = "kNNa",
   if(!(class(x) %in% c("data.frame","data.table","tibble","tbl_df"))){
     stop(cat("class or x, ", class(x), " is not supported"))
   }
-  if(!(initialize %in% c("kNN","kNNa","kNNA","impKNNa","knna","knn","mean","hotdeck","em"))){
+  if(!(initialize %in% c("kNN","kNNa","kNNA","impKNNa","knna","knn","mean","hotdeck","em","dl23","unif","multLN"))){
     stop(cat("initialing method ", initialize, "is not supported"))
   }
   
@@ -111,6 +112,29 @@ impNNetCoDa <- function(x, initialize = "kNNa",
                                          error = function(e) m))
       
     }    
+    if(initialize == "unif"){
+      x_imp <- x
+      for(j in 1:ncol(x)){
+        if(sum(is.na(x[, j])) > 0){
+          x_imp[is.na(x[, j]), j] <- runif(sum(is.na(x[, j])), 0.0000001, dl[j])    
+        }
+      }
+      x.filled <- x_imp
+    }
+    if(initialize == "dl23"){
+      x_imp <- x
+      for(j in 1:ncol(x)){
+        if(sum(is.na(x[, j])) > 0){
+          x_imp[is.na(x[, j]), j] <- 2 * 3 * dl[j]    
+        }
+      }
+      x.filled <- x_imp
+    }    
+    if(initialize == "multLN"){
+      x_imp <- multLN(x, dl=dl, label=NA)
+      x.filled <- x_imp
+      
+    }     
     if(initialize == "mean"){
       m <- 1
       xmean <- x
