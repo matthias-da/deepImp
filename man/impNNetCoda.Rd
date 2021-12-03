@@ -85,7 +85,7 @@ expenditures[expenditures[, 4] < qu[4], 4] <- NA
 \dontrun{
 library(keras)
 library(tensorflow)
-data(expenditures, package = "robCompositions")
+#data(expenditures, package = "robCompositions")
 expenditures_imp <- impNNetCoDa(expenditures)
 expenditures_imp
 }

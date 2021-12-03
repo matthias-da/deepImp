@@ -343,8 +343,8 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
           # build design matrix for factors
           if(any(facs)){
             vars <- (1:(ncol(train_data)))[facs]
-            nc <- max(c(unique(train_data[,vars[1]])),
-                      c(unique(test_data[,vars[1]]))) #+ 1
+            nc <- max(length(unique(train_data[,vars[1]])),
+                      length(unique(test_data[,vars[1]]))) #+ 1
             td <- data.frame("labels" = train_data[,vars[1]])
             td2 <- data.frame("labels" = test_data[,vars[1]])
 #            binmat_train <- to_categorical(train_data[,vars[1]], num_classes = nc)
@@ -457,7 +457,7 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
       } 
      } # end check if na in variable
     } # end loop over all columns
-    
+
     changes[iter] <- improvement(x.imp.old, x.imp, no.loc.mat)
 
     if(verbose) cat("\nmean of relative differences to previous iteration: ", changes[iter])
