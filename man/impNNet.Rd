@@ -9,6 +9,7 @@ impNNet(
   x,
   vartypes = "guess",
   initialize = "knn",
+  normalize = TRUE,
   iterations = 2,
   eps = 1,
   patience.val = 5,
@@ -22,6 +23,7 @@ impNNet(
   model_binary = NULL,
   model_nominal = NULL,
   mi = 1,
+  small = FALSE,
   verbose = TRUE
 )
 }
@@ -31,6 +33,8 @@ impNNet(
 \item{vartypes}{specify the scale of each variable as a vector. For further details see below.}
 
 \item{initialize}{initialization of missing values}
+
+\item{normalize}{normalization of input data (numeric part)}
 
 \item{iterations}{number of iterations for the whole chain}
 
@@ -59,6 +63,8 @@ be made available in future versions.}
 \code{\link[keras]{keras_model_sequential}}.}
 
 \item{mi}{number of multiple imputations}
+
+\item{small}{for small data sets, a model with less layers and neurons is used}
 
 \item{verbose}{progress and additional information to be reported in the console (if TRUE)}
 }

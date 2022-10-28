@@ -14,6 +14,7 @@
 #' @param x data.frame or matrix
 #' @param vartypes specify the scale of each variable as a vector. For further details see below.
 #' @param initialize initialization of missing values
+#' @param normalize normalization of input data (numeric part)
 #' @param iterations number of iterations for the whole chain
 #' @param eps if mean changes over cells is less than eps, the algorithmn will stopp
 #' @param patience.val max number of epochs on which we would like to see no improvement
@@ -30,6 +31,7 @@
 #' @param model_nominal if NULL, a predefined model for numeric variables is chosen. For the specification of a model, see 
 #' \code{\link[keras]{keras_model_sequential}}.
 #' @param mi number of multiple imputations
+#' @param small for small data sets, a model with less layers and neurons is used
 #' @param verbose progress and additional information to be reported in the console (if TRUE)
 #' @import VIM
 #' @import data.table
@@ -50,15 +52,18 @@
 #' 
 #' @export impNNet
 impNNet <- function(x, vartypes = "guess", initialize = "knn", 
-                    iterations = 2, eps = 1,
-                    patience.val = 5, epochs = 10, 
+                    normalize = TRUE,
+                    iterations = 3, eps = 1,
+                    patience.val = 40, epochs = 400, 
                     dropout = 0.1, dense = seq(1000, 100, -100), 
                     optimizer = optimizer_adam(), loss = "mse",
                     activation = "relu",
                     model_numeric = NULL,
                     model_binary = NULL,
                     model_nominal = NULL,
-                    mi = 1, verbose = TRUE){
+                    mi = 1, 
+                    small = FALSE,
+                    verbose = TRUE){
   ## check speed 
   ptm <- proc.time()
   ## check on parameters:
@@ -92,7 +97,7 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
       } else{
         st <- unique(na.omit(x[, i])) %in% c(0,1)       
       }
-
+      
       if(!all(st)) stop("binary vectors must be with values 0 and 1")
     }
   }
@@ -144,156 +149,205 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
   
   ### Models
   if(is.null(model_numeric)){
-  build_model_numeric <- function() {
-    
-    # model <- keras_model_sequential() %>%
-    #   layer_dense(units = 1000, activation = activation,
-    #               input_shape = dim(train_data)[2]) %>%
-    #   layer_batch_normalization() %>%
-    #   layer_dense(units = 900, activation = activation) %>%
-    #   layer_dropout(dropout) %>%
-    #   layer_batch_normalization() %>%
-    #   layer_dense(units = 800, activation = activation) %>%
-    #   layer_dropout(dropout) %>%
-    #   layer_batch_normalization() %>%
-    #   layer_dense(units = 700, activation = activation) %>%
-    #   layer_dropout(dropout) %>%
-    #   layer_batch_normalization() %>%
-    #   layer_dense(units = 600, activation = activation) %>%
-    #   layer_dropout(dropout) %>%
-    #   layer_batch_normalization() %>%
-    #   layer_dense(units = 500, activation = activation) %>%
-    #   layer_dropout(dropout) %>%
-    #   layer_batch_normalization() %>%
-    #   layer_dense(units = 400, activation = activation) %>%
-    #   layer_batch_normalization() %>%
-    #   layer_dense(units = 300, activation = activation) %>%
-    #   layer_batch_normalization() %>%
-    #   layer_dense(units = 200, activation = activation) %>%
-    #   layer_batch_normalization() %>%
-    #   layer_dense(units = 100, activation = activation) %>%
-    #   layer_dense(units = 1,  activation = "linear") 
-   
-    
-   model <- keras_model_sequential() %>%
-     layer_dense(units = dense[1], activation = activation,
-                        input_shape = dim(train_data)[2]) %>% 
-     layer_dropout(dropout) %>%
-     layer_batch_normalization()%>%
-     layer_dense(units = dense[2], activation = activation) %>%
-     layer_dropout(dropout) %>%
-     layer_batch_normalization() %>%
-     layer_dense(units = dense[3], activation = activation) %>%
-     layer_dropout(dropout) %>%
-     layer_batch_normalization()  %>%  
-     layer_dense(units = dense[4], activation = activation) %>%
-     layer_dropout(dropout) %>%
-     layer_batch_normalization()  %>%  
-     layer_dense(units = dense[5], activation = activation) %>%
-     layer_dropout(dropout) %>%
-     layer_batch_normalization() %>%
-     layer_dense(units = dense[6], activation = activation) %>%
-     layer_batch_normalization() %>%
-     layer_dense(units = dense[7], activation = activation) %>%
-     layer_batch_normalization()  %>%  
-     layer_dense(units = dense[8], activation = activation) %>%
-     layer_batch_normalization() %>%    
-     layer_dense(units = dense[9], activation = activation) %>%
-     layer_batch_normalization()  %>%
-     layer_dense(units = dense[10], activation = activation) %>%
-     layer_batch_normalization()  %>% 
-     layer_dense(units = 1,  activation = "linear") 
-   
-    model %>% compile(
-      loss = loss,
-      optimizer = optimizer_adam(),
-      metrics = list("mean_absolute_error")
-    )
-  }
+    build_model_numeric <- function() {
+      
+      # model <- keras_model_sequential() %>%
+      #   layer_dense(units = 1000, activation = activation,
+      #               input_shape = dim(train_data)[2]) %>%
+      #   layer_batch_normalization() %>%
+      #   layer_dense(units = 900, activation = activation) %>%
+      #   layer_dropout(dropout) %>%
+      #   layer_batch_normalization() %>%
+      #   layer_dense(units = 800, activation = activation) %>%
+      #   layer_dropout(dropout) %>%
+      #   layer_batch_normalization() %>%
+      #   layer_dense(units = 700, activation = activation) %>%
+      #   layer_dropout(dropout) %>%
+      #   layer_batch_normalization() %>%
+      #   layer_dense(units = 600, activation = activation) %>%
+      #   layer_dropout(dropout) %>%
+      #   layer_batch_normalization() %>%
+      #   layer_dense(units = 500, activation = activation) %>%
+      #   layer_dropout(dropout) %>%
+      #   layer_batch_normalization() %>%
+      #   layer_dense(units = 400, activation = activation) %>%
+      #   layer_batch_normalization() %>%
+      #   layer_dense(units = 300, activation = activation) %>%
+      #   layer_batch_normalization() %>%
+      #   layer_dense(units = 200, activation = activation) %>%
+      #   layer_batch_normalization() %>%
+      #   layer_dense(units = 100, activation = activation) %>%
+      #   layer_dense(units = 1,  activation = "linear") 
+      
+      if(small){
+        model <- keras_model_sequential() %>%
+          layer_dense(units = 300, activation = activation,
+                      input_shape = dim(train_data)[2]) %>%
+          layer_dropout(dropout) %>%
+          layer_batch_normalization() %>%
+          layer_dense(units = 128, activation = activation) %>%
+          layer_dropout(dropout) %>%
+          layer_batch_normalization() %>%
+          layer_dense(units = 64, activation = activation) %>%
+          layer_dense(units = 32,  activation = "linear") %>% compile(
+            loss = loss,
+            optimizer = optimizer_adam(),
+            metrics = list("mean_absolute_error")
+          )
+      } else{
+      model <- keras_model_sequential() %>%
+        layer_dense(units = dense[1], activation = activation,
+                    input_shape = dim(train_data)[2]) %>% 
+        layer_dropout(dropout) %>%
+        layer_batch_normalization()%>%
+        layer_dense(units = dense[2], activation = activation) %>%
+        layer_dropout(dropout) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = dense[3], activation = activation) %>%
+        layer_dropout(dropout) %>%
+        layer_batch_normalization()  %>%  
+        layer_dense(units = dense[4], activation = activation) %>%
+        layer_dropout(dropout) %>%
+        layer_batch_normalization()  %>%  
+        layer_dense(units = dense[5], activation = activation) %>%
+        layer_dropout(dropout) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = dense[6], activation = activation) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = dense[7], activation = activation) %>%
+        layer_batch_normalization()  %>%  
+        layer_dense(units = dense[8], activation = activation) %>%
+        layer_batch_normalization() %>%    
+        layer_dense(units = dense[9], activation = activation) %>%
+        layer_batch_normalization()  %>%
+        layer_dense(units = dense[10], activation = activation) %>%
+        layer_batch_normalization()  %>% 
+        layer_dense(units = 1,  activation = "linear") 
+      
+      model %>% compile(
+        loss = loss,
+        optimizer = optimizer_adam(),
+        metrics = list("mean_absolute_error")
+      )
+      }
+    }
   }
   
   if(is.null(model_binary)){
-  build_model_binary <- function() {
-    
-    model <- keras_model_sequential() %>%
-      layer_dense(units = 1000, activation = activation,
-                  input_shape = dim(train_data)[2]) %>%
-      layer_dropout(dropout) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 900, activation = activation) %>%
-      layer_dropout(dropout) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 800, activation = activation) %>%
-      layer_dropout(dropout) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 700, activation = activation) %>%
-      layer_dropout(dropout) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 600, activation = activation) %>%
-      layer_dropout(dropout) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 500, activation = activation) %>%
-      layer_dropout(dropout) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 400, activation = activation) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 300, activation = activation) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 200, activation = activation) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 100, activation = activation) %>%
-      layer_dense(units = 2,  activation = "softmax")
-    
-    model %>% compile(
-      loss = "categorical_crossentropy",
-      optimizer = optimizer_adam(),
-      metrics = list("accuracy")
-    )
-  }
+    build_model_binary <- function() {
+      
+      if(small){
+        model <- keras_model_sequential() %>%
+          layer_dense(units = 300, activation = activation,
+                      input_shape = dim(train_data)[2]) %>%
+          layer_dropout(dropout) %>%
+          layer_batch_normalization() %>%
+          layer_dense(units = 128, activation = activation) %>%
+          layer_dropout(dropout) %>%
+          layer_batch_normalization() %>%
+          layer_dense(units = 64, activation = activation) %>%
+          layer_dense(units = units_final,  activation = "softmax") %>% compile(
+            loss = "categorical_crossentropy",
+            optimizer = optimizer_adam(),
+            metrics = list("accuracy")
+          )
+      } else{
+      model <- keras_model_sequential() %>%
+        layer_dense(units = 1000, activation = activation,
+                    input_shape = dim(train_data)[2]) %>%
+        layer_dropout(dropout) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = 900, activation = activation) %>%
+        layer_dropout(dropout) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = 800, activation = activation) %>%
+        layer_dropout(dropout) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = 700, activation = activation) %>%
+        layer_dropout(dropout) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = 600, activation = activation) %>%
+        layer_dropout(dropout) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = 500, activation = activation) %>%
+        layer_dropout(dropout) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = 400, activation = activation) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = 300, activation = activation) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = 200, activation = activation) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = 100, activation = activation) %>%
+        layer_dense(units = 2,  activation = "softmax")
+      
+      model %>% compile(
+        loss = "categorical_crossentropy",
+        optimizer = optimizer_adam(),
+        metrics = list("accuracy")
+      )
+      }
+    }
   }
   
   if(is.null(model_nominal)){
-  build_model_nominal <- function() {
-    
-    model <- keras_model_sequential() %>%
-      layer_dense(units = 1000, activation = activation,
-                  input_shape = dim(train_data)[2]) %>%
-      layer_dropout(dropout) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 900, activation = activation) %>%
-      layer_dropout(dropout) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 800, activation = activation) %>%
-      layer_dropout(dropout) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 700, activation = activation) %>%
-      layer_dropout(dropout) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 600, activation = activation) %>%
-      layer_dropout(dropout) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 500, activation = activation) %>%
-      layer_dropout(dropout) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 400, activation = activation) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 300, activation = activation) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 200, activation = activation) %>%
-      layer_batch_normalization() %>%
-      layer_dense(units = 100, activation = activation) %>%
-      #layer_dense(units = ncol(x.data$train$y),  activation = "softmax")
-      layer_dense(units = length(levels(train_labels)),  activation = "softmax")
-  #    layer_dense(units = length(levels(train_labels)),  activation = "softmax")
-   #   layer_dense(units = ncol(train_labels),  activation = "softmax")
-    
-    model %>% compile(
-      loss = "categorical_crossentropy",
-     # loss = "sparse_categorical_crossentropy",
-      optimizer = optimizer_adam(),
-      metrics = list("accuracy")
-    )
-  }
+    build_model_nominal <- function() {
+      if(small){
+        model <- keras_model_sequential() %>%
+          layer_dense(units = 300, activation = activation,
+                      input_shape = dim(train_data)[2]) %>%
+          layer_dropout(dropout) %>%
+          layer_batch_normalization() %>%
+          layer_dense(units = 128, activation = activation) %>%
+          layer_dropout(dropout) %>%
+          layer_batch_normalization() %>%
+          layer_dense(units = 64, activation = activation) %>%
+          layer_dense(units = length(levels(train_labels)),  activation = "softmax") %>% compile(
+            loss = "categorical_crossentropy",
+            optimizer = optimizer_adam(),
+            metrics = list("accuracy")
+          )
+      } else{
+      model <- keras_model_sequential() %>%
+        layer_dense(units = 1000, activation = activation,
+                    input_shape = dim(train_data)[2]) %>%
+        layer_dropout(dropout) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = 900, activation = activation) %>%
+        layer_dropout(dropout) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = 800, activation = activation) %>%
+        layer_dropout(dropout) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = 700, activation = activation) %>%
+        layer_dropout(dropout) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = 600, activation = activation) %>%
+        layer_dropout(dropout) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = 500, activation = activation) %>%
+        layer_dropout(dropout) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = 400, activation = activation) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = 300, activation = activation) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = 200, activation = activation) %>%
+        layer_batch_normalization() %>%
+        layer_dense(units = 100, activation = activation) %>%
+        #layer_dense(units = ncol(x.data$train$y),  activation = "softmax")
+        layer_dense(units = length(levels(train_labels)),  activation = "softmax")
+      #    layer_dense(units = length(levels(train_labels)),  activation = "softmax")
+      #   layer_dense(units = ncol(train_labels),  activation = "softmax")
+      
+      model %>% compile(
+        loss = "categorical_crossentropy",
+        # loss = "sparse_categorical_crossentropy",
+        optimizer = optimizer_adam(),
+        metrics = list("accuracy")
+      )
+      }
+    }
   }
   
   # setting limits for "runtime"
@@ -303,172 +357,178 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
   ### Loop over mi
   results <- list()
   for(mis in 1:mi){
-  if(verbose & mi > 1){
-    cat("\n\n---")
-    cat("\nmultiple imputation", mis, "\n---")
-  }
-  # coda vars:
-  if(sum(indexComp) > 1){
-    cen <- robCompositions::cenLR(x.imp[, indexComp])
-    x.imp[, indexComp] <- cen$xclr
-  }  
-    
-  x.imp <- x.filled <- x.imp.start
-  ### Loop over iterations
-  changes <- iterations
-  for(iter in 1:iterations){
-    x.imp.old <- x.imp
-    if(verbose) cat("\n\niteration (", iter, "/", iterations,")\n")
-  ### Loop over columns ###
-  {
-    for(j in 1:ncol(x)){
-      if(sum(is.na(x[, j])) > 0){
-        if(verbose) cat("\n  imputing variable ", j,"/",ncol(x))
-
-          train_data <- x.filled[!no.loc.mat[, j], -j, drop = FALSE]
-          train_labels <- x.filled[!no.loc.mat[,j], j]
-          test_data <- x.filled[no.loc.mat[,j], -j, drop = FALSE]
-          test_labels <- x.filled[no.loc.mat[,j], j] 
-          
-          # Normalize training data (only non-factors)
-          facs <- vartypes[-j] %in% c("factor","nominal","binary")
-          trainscale <- scale(train_data[, !facs, drop = FALSE])
-          train_data[, !facs] <- trainscale
-          
-          # Use means and standard deviations from training set to normalize test set
-          col_means_train <- attr(trainscale, "scaled:center") 
-          col_stddevs_train <- attr(trainscale, "scaled:scale")
-          test_data[, !facs] <- scale(test_data[, !facs], 
-                                      center = col_means_train, 
-                                      scale = col_stddevs_train)
-          
-          # build design matrix for factors
-          if(any(facs)){
-            vars <- (1:(ncol(train_data)))[facs]
-            nc <- max(length(unique(train_data[,vars[1]])),
-                      length(unique(test_data[,vars[1]]))) #+ 1
-            td <- data.frame("labels" = train_data[,vars[1]])
-            td2 <- data.frame("labels" = test_data[,vars[1]])
-#            binmat_train <- to_categorical(train_data[,vars[1]], num_classes = nc)
-#            binmat_test <- to_categorical(test_data[,vars[1]], num_classes = nc)   
-            binmat_train <- model.matrix(~labels-1, data = td)
-            binmat_test <- model.matrix(~labels-1, data = td2)
-            if(sum(facs) > 1){
-              for(i in (1:ncol(train_data))[facs]){
-                nc <- max(c(length(unique(train_data[,i])),
-                            length(unique(test_data[,i])))) + 1
-#                binmat_train <- cbind(binmat_train, 
-#                                      to_categorical(train_data[,i], num_classes = nc))
-#                binmat_test <- cbind(binmat_test, 
-#                                     to_categorical(test_data[,i], num_classes = nc))
-                tdi <- data.frame("labels" = train_data[,i])
-                tdi2 <- data.frame("labels" = test_data[,i])
-                binmat_train <- cbind(binmat_train, 
-                                      model.matrix(~labels-1, data = tdi))
-                binmat_test <- cbind(binmat_test, 
-                                      model.matrix(~labels-1, data = tdi2))               
-              }
-            }
-            train_data <- train_data[, !facs]
-            train_data <- cbind(train_data, binmat_train)
-            test_data <- test_data[, !facs, drop = FALSE]
-            test_data <- cbind(test_data, binmat_test)            
-          }
-        
-         if(vartypes[j] %in% c("numeric","count","compositional")){   
-           # setting limits for "runtime"
-           early_stop <- callback_early_stopping(monitor = "val_loss", patience = patience.val)
-           if(exists("model")){
-             rm(model)
-           }
-           model <- build_model_numeric()
-
-          history <- model %>% fit(
-            as.matrix(train_data),
-            train_labels,
-            epochs = epochs,
-            validation_split = 0.2,
-            verbose = 0,
-            callbacks = list(early_stop, print_dot_callback)
-          )
-          
-          test_predictions <- model %>% predict(as.matrix(test_data))
-
-          x.imp[(no.loc.mat[,j]),j] <- test_predictions
-          if(vartypes[j] == "count"){
-            x.imp[(no.loc.mat[,j]),j] <- round(x.imp[(no.loc.mat[,j]),j])
-          }
-
-          x.filled <- x.imp
-        }
- 
-          
-        if(vartypes[j] %in% c("nominal","binary")){   
-         # if(vartypes[j] == "binary") browser()
-            
-            # setting limits for "runtime"
-            early_stop <- callback_early_stopping(monitor = "val_loss", patience = patience.val)
-            
-            # building actual model
-            if(exists("model")){
-              rm(model)}
-            if(vartypes[j] == "nominal"){
-              model <- build_model_nominal()
-              # fitting on model
-              #nc <- max(c(ncol(to_categorical(train_labels)), 
-              #            ncol(to_categorical(train_labels)))) 
-              #  to_categorical(train_labels, num_classes = nc)
-              tm <- data.frame("labels" = train_labels)
-              history <- model %>% fit(
-                as.matrix(train_data),
-                #to_categorical(train_labels, num_classes = nc),
-                model.matrix(~ labels-1, data = tm),
-                epochs = epochs,
-                validation_split = 0.2,
-                verbose = 0,
-                callbacks = list(early_stop, print_dot_callback)
-              )
-            } else {
-              model <- build_model_binary()  
-              # fitting on model
-              nc <- 2 
-              history <- model %>% fit(
-                as.matrix(train_data),
-                to_categorical(train_labels, num_classes = nc),
-                epochs = epochs,
-                validation_split = 0.2,
-                verbose = 0,
-                callbacks = list(early_stop, print_dot_callback)
-              )
-            }
-
-            
-            test_predictions <- model %>% predict(as.matrix(test_data))
-            if(vartypes[j] == "binary"){
-              x.imp[(no.loc.mat[,j]),j] <- round(test_predictions)[,2]
-            }
-            if(vartypes[j] == "nominal"){
-              bestlev <- apply(test_predictions,1,which.max)
-              bestlev <- levels(train_labels)[bestlev]
-              x.imp[(no.loc.mat[,j]),j] <- bestlev
-#              x.imp[(no.loc.mat[,j]),j] <- apply(test_predictions,1,which.max)
-            }
-            x.filled <- x.imp
-          }
-    
-      } 
-     } # end check if na in variable
-    } # end loop over all columns
-
-    changes[iter] <- improvement(x.imp.old, x.imp, no.loc.mat)
-
-    if(verbose) cat("\nmean of relative differences to previous iteration: ", changes[iter])
-    if(changes[iter] < eps & iter < iterations){
-      if(verbose) cat("\n\nconverged after", iter,"iterations (< eps), \n skipping remaining iterations\n")
-      break()
+    if(verbose & mi > 1){
+      cat("\n\n---")
+      cat("\nmultiple imputation", mis, "\n---")
     }
-   } # end loop over iter
-   results[[mis]] <- x.imp
+    # coda vars:
+    if(sum(indexComp) > 1){
+      cen <- robCompositions::cenLR(x.imp[, indexComp])
+      x.imp[, indexComp] <- cen$xclr
+    }  
+    
+    x.imp <- x.filled <- x.imp.start
+    ### Loop over iterations
+    changes <- iterations
+    for(iter in 1:iterations){
+      x.imp.old <- x.imp
+      if(verbose) cat("\n\niteration (", iter, "/", iterations,")\n")
+      ### Loop over columns ###
+      {
+        for(j in 1:ncol(x)){
+          if(sum(is.na(x[, j])) > 0){
+            if(verbose) cat("\n  imputing variable ", j,"/",ncol(x))
+            
+            train_data <- x.filled[!no.loc.mat[, j], -j, drop = FALSE]
+            train_labels <- x.filled[!no.loc.mat[,j], j]
+            test_data <- x.filled[no.loc.mat[,j], -j, drop = FALSE]
+            test_labels <- x.filled[no.loc.mat[,j], j] 
+            
+            # Normalize training data (only non-factors)
+            facs <- vartypes[-j] %in% c("factor","nominal","binary")
+            if(normalize){
+              trainscale <- scale(train_data[, !facs, drop = FALSE])
+              train_data[, !facs] <- trainscale
+              
+              # Use means and standard deviations from training set to normalize test set
+              col_means_train <- attr(trainscale, "scaled:center") 
+              col_stddevs_train <- attr(trainscale, "scaled:scale")
+              test_data[, !facs] <- scale(test_data[, !facs], 
+                                          center = col_means_train, 
+                                          scale = col_stddevs_train)
+            } 
+            
+            
+            # build design matrix for factors
+            if(any(facs)){
+              vars <- (1:(ncol(train_data)))[facs]
+              nc <- max(length(unique(train_data[,vars[1]])),
+                        length(unique(test_data[,vars[1]]))) #+ 1
+              td <- data.frame("labels" = train_data[,vars[1]])
+              td2 <- data.frame("labels" = test_data[,vars[1]])
+              #            binmat_train <- to_categorical(train_data[,vars[1]], num_classes = nc)
+              #            binmat_test <- to_categorical(test_data[,vars[1]], num_classes = nc)   
+              binmat_train <- model.matrix(~labels-1, data = td)
+              binmat_test <- model.matrix(~labels-1, data = td2)
+              if(sum(facs) > 1){
+                for(i in (1:ncol(train_data))[facs]){
+                  nc <- max(c(length(unique(train_data[,i])),
+                              length(unique(test_data[,i])))) + 1
+                  #                binmat_train <- cbind(binmat_train, 
+                  #                                      to_categorical(train_data[,i], num_classes = nc))
+                  #                binmat_test <- cbind(binmat_test, 
+                  #                                     to_categorical(test_data[,i], num_classes = nc))
+                  tdi <- data.frame("labels" = train_data[,i])
+                  tdi2 <- data.frame("labels" = test_data[,i])
+                  binmat_train <- cbind(binmat_train, 
+                                        model.matrix(~labels-1, data = tdi))
+                  binmat_test <- cbind(binmat_test, 
+                                       model.matrix(~labels-1, data = tdi2))               
+                }
+              } 
+              train_data <- train_data[, !facs]
+              train_data <- cbind(train_data, binmat_train)
+              test_data <- test_data[, !facs, drop = FALSE]
+              test_data <- cbind(test_data, binmat_test)            
+            }
+            
+            if(vartypes[j] %in% c("numeric","count","compositional")){   
+              # setting limits for "runtime"
+              early_stop <- callback_early_stopping(monitor = "val_loss", patience = patience.val)
+              if(exists("model")){
+                rm(model)
+              }
+              model <- build_model_numeric()
+              
+              history <- model %>% fit(
+                as.matrix(train_data),
+                train_labels,
+                epochs = epochs,
+                validation_split = 0.2,
+                verbose = 0,
+                callbacks = list(early_stop, print_dot_callback)
+              )
+              
+              test_predictions <- model %>% predict(as.matrix(test_data))
+              # if(normalize){
+              #   test_predictions <- test_predictions * col_stddevs_train + col_means_train
+              # }
+              
+              x.imp[(no.loc.mat[,j]),j] <- test_predictions
+              if(vartypes[j] == "count"){
+                x.imp[(no.loc.mat[,j]),j] <- round(x.imp[(no.loc.mat[,j]),j])
+              }
+              
+              x.filled <- x.imp
+            }
+            
+            
+            if(vartypes[j] %in% c("nominal","binary")){   
+              # if(vartypes[j] == "binary") browser()
+              
+              # setting limits for "runtime"
+              early_stop <- callback_early_stopping(monitor = "val_loss", patience = patience.val)
+              
+              # building actual model
+              if(exists("model")){
+                rm(model)}
+              if(vartypes[j] == "nominal"){
+                model <- build_model_nominal()
+                # fitting on model
+                #nc <- max(c(ncol(to_categorical(train_labels)), 
+                #            ncol(to_categorical(train_labels)))) 
+                #  to_categorical(train_labels, num_classes = nc)
+                tm <- data.frame("labels" = train_labels)
+                history <- model %>% fit(
+                  as.matrix(train_data),
+                  #to_categorical(train_labels, num_classes = nc),
+                  model.matrix(~ labels-1, data = tm),
+                  epochs = epochs,
+                  validation_split = 0.2,
+                  verbose = 0,
+                  callbacks = list(early_stop, print_dot_callback)
+                )
+              } else {
+                model <- build_model_binary()  
+                # fitting on model
+                nc <- 2 
+                history <- model %>% fit(
+                  as.matrix(train_data),
+                  to_categorical(train_labels, num_classes = nc),
+                  epochs = epochs,
+                  validation_split = 0.2,
+                  verbose = 0,
+                  callbacks = list(early_stop, print_dot_callback)
+                )
+              }
+              
+              
+              test_predictions <- model %>% predict(as.matrix(test_data))
+              if(vartypes[j] == "binary"){
+                x.imp[(no.loc.mat[,j]),j] <- round(test_predictions)[,2]
+              }
+              if(vartypes[j] == "nominal"){
+                bestlev <- apply(test_predictions,1,which.max)
+                bestlev <- levels(train_labels)[bestlev]
+                x.imp[(no.loc.mat[,j]),j] <- bestlev
+                #              x.imp[(no.loc.mat[,j]),j] <- apply(test_predictions,1,which.max)
+              }
+              x.filled <- x.imp
+            }
+            
+          } 
+        } # end check if na in variable
+      } # end loop over all columns
+      
+      changes[iter] <- improvement(x.imp.old, x.imp, no.loc.mat)
+      
+      if(verbose) cat("\nmean of relative differences to previous iteration: ", changes[iter])
+      if(changes[iter] < eps & iter < iterations){
+        if(verbose) cat("\n\nconverged after", iter,"iterations (< eps), \n skipping remaining iterations\n")
+        break()
+      }
+    } # end loop over iter
+    results[[mis]] <- x.imp
   } # end loop over mi
   if(mi == 1){
     results <- data.frame(results[[1]])
