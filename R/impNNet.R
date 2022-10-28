@@ -79,6 +79,8 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
   
   if(length(vartypes == "compositional") > 2){
     indexComp <- vartypes == "compositional"
+  } else{
+    indexComp <- NULL
   }
   
   ## binary vectors must be stored as 0/1
