@@ -9,11 +9,12 @@ impNNet(
   x,
   vartypes = "guess",
   initialize = "knn",
-  normalize = TRUE,
-  iterations = 2,
+  normalize_x = TRUE,
+  normalize_y = FALSE,
+  iterations = 3,
   eps = 1,
-  patience.val = 5,
-  epochs = 10,
+  patience.val = 40,
+  epochs = 400,
   dropout = 0.1,
   dense = seq(1000, 100, -100),
   optimizer = optimizer_adam(),
@@ -33,8 +34,6 @@ impNNet(
 \item{vartypes}{specify the scale of each variable as a vector. For further details see below.}
 
 \item{initialize}{initialization of missing values}
-
-\item{normalize}{normalization of input data (numeric part)}
 
 \item{iterations}{number of iterations for the whole chain}
 
@@ -67,6 +66,8 @@ be made available in future versions.}
 \item{small}{for small data sets, a model with less layers and neurons is used}
 
 \item{verbose}{progress and additional information to be reported in the console (if TRUE)}
+
+\item{normalize}{normalization of input data (numeric part)}
 }
 \value{
 the imputed data set

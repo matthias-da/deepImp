@@ -52,7 +52,7 @@
 #' 
 #' @export impNNet
 impNNet <- function(x, vartypes = "guess", initialize = "knn", 
-                    normalize = TRUE,
+                    normalize_x = TRUE, normalize_y = FALSE,
                     iterations = 3, eps = 1,
                     patience.val = 40, epochs = 400, 
                     dropout = 0.1, dense = seq(1000, 100, -100), 
@@ -189,7 +189,7 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
           layer_dropout(dropout) %>%
           layer_batch_normalization() %>%
           layer_dense(units = 64, activation = activation) %>%
-          layer_dense(units = 32,  activation = "linear") %>% compile(
+          layer_dense(units = 1,  activation = "linear") %>% compile(
             loss = loss,
             optimizer = optimizer_adam(),
             metrics = list("mean_absolute_error")
@@ -386,13 +386,25 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
             
             # Normalize training data (only non-factors)
             facs <- vartypes[-j] %in% c("factor","nominal","binary")
-            if(normalize){
+            if(normalize_x){
+              # variable to be imputed:
+              colnames(x.filled)[j]
               trainscale <- scale(train_data[, !facs, drop = FALSE])
               train_data[, !facs] <- trainscale
-              
-              # Use means and standard deviations from training set to normalize test set
               col_means_train <- attr(trainscale, "scaled:center") 
               col_stddevs_train <- attr(trainscale, "scaled:scale")
+              
+              if(normalize_y){
+                if(vartypes[j] %in% c("numeric","count","compositional")){
+                  train_labels <- scale(train_labels)
+                  scale_labels_center <- attr(train_labels, "scaled:center") 
+                  scale_labels_std <- attr(train_labels, "scaled:scale")
+                  train_labels <- as.numeric(train_labels)
+                }
+              }
+              
+              # Use means and standard deviations from training set to normalize test set
+
               test_data[, !facs] <- scale(test_data[, !facs], 
                                           center = col_means_train, 
                                           scale = col_stddevs_train)
@@ -450,11 +462,15 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
               )
               
               test_predictions <- model %>% predict(as.matrix(test_data))
-              # if(normalize){
-              #   test_predictions <- test_predictions * col_stddevs_train + col_means_train
-              # }
+              # cat("\n new predictions:\n")
+              # print(summary(test_predictions))
+              if(normalize_y){
+                test_predictions <- test_predictions * scale_labels_std + scale_labels_center
+              }
               
               x.imp[(no.loc.mat[,j]),j] <- test_predictions
+              # cat("\n after normalizing:\n")
+              # print(summary(test_predictions))              
               if(vartypes[j] == "count"){
                 x.imp[(no.loc.mat[,j]),j] <- round(x.imp[(no.loc.mat[,j]),j])
               }
@@ -516,7 +532,7 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
               x.filled <- x.imp
             }
             
-          } 
+          }
         } # end check if na in variable
       } # end loop over all columns
       
