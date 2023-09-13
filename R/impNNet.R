@@ -101,7 +101,7 @@ impNNet <- function(x, vartypes = "guess", initialize = "knn",
       if(!all(st)) stop("binary vectors must be with values 0 and 1")
     }
   }
-  
+  # browser()
   # for the callback, print info about status
   print_dot_callback <- callback_lambda(
     on_epoch_end = function(epoch, logs) {
