@@ -5,7 +5,7 @@
 .initialize_na <- function(x, method = "knn") {
   switch(method,
     knn = , kNN = VIM::kNN(x, imp_var = FALSE),
-    kNNa = , knna = robCompositions::impKNNa(x)$xImp,
+    kNNa = , knna = as.data.frame(robCompositions::impKNNa(x)$xImp),
     hotdeck = VIM::hotdeck(x, imp_var = FALSE),
     mean = {
       for (j in seq_along(x)) {
