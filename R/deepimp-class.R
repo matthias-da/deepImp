@@ -80,25 +80,29 @@ summary.deepimp <- function(object, ...) {
   miss <- colSums(is.na(object$data))
   cat("  missing per variable:\n")
   print(miss)
-  if (!is.null(object$info$loss)) {
-    cat(sprintf("  final loss   : %.4f\n", utils::tail(object$info$loss, 1)))
+  conv <- object$info$convergence
+  trace <- if (is.list(conv)) conv[[1]] else conv
+  if (!is.null(trace) && length(trace) > 0L) {
+    cat(sprintf("  converged in : %d iteration(s); last change = %.4g\n",
+                length(trace), utils::tail(trace, 1)))
   }
   invisible(object)
 }
 
 #' @export
 plot.deepimp <- function(x, ...) {
-  if (is.null(x$info$loss) || length(x$info$loss) == 0L) {
-    message("No loss curve available to plot.")
+  conv <- x$info$convergence
+  trace <- if (is.list(conv)) conv[[1]] else conv
+  if (is.null(trace) || length(trace) == 0L) {
+    message("No convergence trace available to plot.")
     return(invisible(x))
   }
-  loss <- x$info$loss
   graphics::plot(
-    seq_along(loss), loss,
-    type = "l",
-    xlab = "epoch",
-    ylab = "loss",
-    main = "deepimp training loss"
+    seq_along(trace), trace,
+    type = "b",
+    xlab = "iteration",
+    ylab = "mean change in imputed cells",
+    main = "deepimp convergence"
   )
   invisible(x)
 }

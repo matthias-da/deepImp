@@ -1,0 +1,220 @@
+---
+title: "Neural-network imputation with deepImp"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Neural-network imputation with deepImp}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE, comment = "#>",
+  message = FALSE, warning = FALSE,
+  fig.width = 6, fig.height = 4, dpi = 100
+)
+# Embed figures as base64 data URIs directly in the pre-computed .Rmd, so no
+# loose 'figure/' directory is shipped (avoids the CRAN "leftover from knitr" NOTE).
+knitr::opts_knit$set(upload.fun = knitr::image_uri)
+```
+
+> This vignette is **pre-computed**: its outputs were generated on a machine with a
+> working `torch` backend (see `vignettes/deepImp.Rmd.orig` and
+> `vignettes/precompute.R`). This keeps the package check fast and free of a Python
+> or `libtorch` dependency while still showing real results.
+
+## Why neural-network imputation?
+
+Most real data sets contain missing values, and discarding incomplete rows wastes
+information and can bias an analysis. *Imputation* fills the gaps with plausible
+values so the data can be analysed as a whole. Classical imputation methods (mean
+imputation, $k$-nearest neighbours, regression/PMM) assume a fixed, usually linear,
+relationship between a variable and its predictors.
+
+`deepImp` instead learns that relationship with a **neural network**, which can
+capture non-linear and interaction structure without the user specifying it. It
+imputes one variable at a time, using all the others as predictors, and cycles
+through the variables repeatedly until the imputations stabilise (an *iterative,
+chained* scheme). The package handles two settings with the same engine:
+
+* **mixed-type data** -- numeric, count, semi-continuous, binary and nominal
+  variables -- via `impNNet()`;
+* **compositional data with rounded zeros** -- values that fall below a detection
+  limit -- via `impNNetCoDa()`.
+
+Networks run on a native [torch](https://torch.mlverse.org/) backend by default
+(no Python required), or optionally on [keras3](https://keras3.posit.co/).
+
+```{r setup}
+library(deepImp)
+```
+
+## The architecture: `deepimp_arch()`
+
+The network is described by a `deepimp_arch()` object. Rather than hard-coding a
+topology, you choose the depth and width (`hidden`), the regularisation
+(`dropout`, `batchnorm`), the `activation`, and the `optimizer` and its
+`learning_rate`:
+
+```{r arch}
+arch <- deepimp_arch(hidden = c(128, 64, 32), dropout = 0.1, activation = "relu")
+arch
+```
+
+`hidden = c(128, 64, 32)` means three hidden layers of 128, 64 and 32 units. For
+small data sets or quick runs, `deepimp_arch_small()` is a lighter preset:
+
+```{r arch-small}
+deepimp_arch_small()
+```
+
+The same architecture object is translated to whichever backend you select, so a
+configuration is portable across `torch` and `keras3`.
+
+## Imputing mixed-type data with `impNNet()`
+
+We use the `sleep` data from the `VIM` package -- mammal sleep measurements that
+already contain genuine missing values.
+
+```{r sleep-data}
+data(sleep, package = "VIM")
+str(sleep)
+colSums(is.na(sleep))
+```
+
+`impNNet()` first infers the measurement scale of each column with `guessType()`
+(you can override this with the `vartypes` argument). This determines whether a
+column is modelled by regression (numeric/count) or classification
+(binary/nominal):
+
+```{r guesstype}
+guessType(sleep)$type
+```
+
+Now we impute. We use the small architecture and a modest number of epochs to keep
+the example quick; in practice you would train longer. The `seed` makes the run
+reproducible (exactly so when `dropout = 0`):
+
+```{r impnnet-run}
+imp <- impNNet(sleep, arch = deepimp_arch_small(), epochs = 50,
+               iterations = 3, seed = 1)
+imp
+```
+
+The result is a `"deepimp"` object. `summary()` reports how many cells were imputed
+per variable, and `getImputed()` (or `as.data.frame()`) returns the completed data
+frame:
+
+```{r impnnet-summary}
+summary(imp)
+completed <- getImputed(imp)
+```
+
+To see the imputation at work, look at cells that were missing before. For example,
+the non-dreaming sleep variable `NonD` had missing entries; here are the values
+`deepImp` filled in:
+
+```{r impnnet-inspect}
+missing_rows <- which(is.na(sleep$NonD))
+round(completed$NonD[missing_rows], 2)
+```
+
+`plot()` shows the convergence of the chained imputation -- the mean change in the
+imputed cells from one iteration to the next, which should decrease:
+
+```{r impnnet-plot}
+plot(imp)
+```
+
+## Compositional data and rounded zeros with `impNNetCoDa()`
+
+*Compositional* data carry only relative information: what matters is the ratios
+between parts (for example, the proportions of chemical elements in a soil sample),
+not their absolute magnitudes. A **rounded zero** is a part recorded as zero only
+because its true value fell below a measurement *detection limit* -- it is not a
+true absence. Ordinary imputation is inappropriate here for two reasons: it ignores
+the relative (log-ratio) geometry of the data, and it may return values *above* the
+detection limit, which contradicts the very reason the value was recorded as zero.
+
+`impNNetCoDa()` addresses both: it works in pivot log-ratio coordinates and
+**censors** each imputed value at the detection limit. We illustrate with a small
+three-part composition in which some values of part `a` fall below a limit of 1 and
+are therefore recorded as zero:
+
+```{r coda-data}
+set.seed(1)
+n <- 60
+x <- data.frame(
+  a = runif(n, 5, 10),
+  b = runif(n, 5, 10),
+  c = runif(n, 5, 10)
+)
+dl <- c(1, 1, 1)          # detection limit per part
+x$a[1:6] <- 0             # rounded zeros: recorded 0, truly below the limit
+head(x)
+```
+
+We pass the detection limits in `dl` and tell the function which value marks a
+rounded zero with `label = 0`:
+
+```{r coda-run}
+impc <- impNNetCoDa(x, dl = dl, label = 0, correction = "truncate",
+                    arch = deepimp_arch_small(), epochs = 50,
+                    iterations = 2, seed = 1)
+filled <- getImputed(impc)
+head(filled)
+```
+
+The rounded zeros in part `a` have been replaced by strictly positive values that
+respect the detection limit:
+
+```{r coda-inspect}
+filled$a[1:6]
+all(filled$a[1:6] > 0 & filled$a[1:6] <= dl[1])
+```
+
+The `correction` argument controls how the prediction is censored:
+
+* `"truncate"` (default) sets any imputed value above the limit to the limit, as in
+  Templ (2021);
+* `"expectation"` uses the mean of a normal distribution truncated at the limit,
+  pulling values strictly below it;
+* `"none"` applies no censoring (useful for diagnostics or ablation).
+
+Setting `coda = FALSE` bypasses the log-ratio transform and imputes on the raw
+scale, which is occasionally useful for comparison.
+
+## Choosing a backend
+
+Both functions accept `backend = "torch"` (the default; native `libtorch`, no
+Python) or `backend = "keras"` (requires the `keras3` package and a working
+Keras/TensorFlow backend, installed once with `keras3::install_keras()`):
+
+```{r backend, eval = FALSE}
+imp_keras <- impNNet(sleep, backend = "keras",
+                     arch = deepimp_arch_small(), epochs = 50, seed = 1)
+```
+
+The two backends implement the same architecture but will not produce numerically
+identical results, because their weight initialisation, random-number streams and
+optimiser internals differ.
+
+## Reproducibility
+
+A `seed` makes a run repeatable within a backend. Reproducibility is **exact when
+`dropout = 0`**; with `dropout > 0` the backend's training-time mask sampling is
+not fully pinned by the seed in the current `torch` build, so repeated runs are
+close but may not be bit-for-bit identical. For a strictly reproducible benchmark,
+set `dropout = 0`.
+
+## A note on multiple completions
+
+With `m > 1`, `impNNet()` and `impNNetCoDa()` return several completed data sets.
+These are **stochastic replicate completions**, not statistically valid multiple
+imputation: they do not implement a proper posterior, so they should not be used
+for Rubin-rule variance estimation.
+
+## Reference
+
+Templ, M. (2021). Imputation of rounded zeros for compositional data using neural
+networks. In: *Advances in Compositional Data Analysis* (Festschrift). Springer.
