@@ -4,8 +4,12 @@ test_that("seam generics dispatch on the backend tag", {
   expect_error(.backend("nope"), "Unknown backend")
 })
 
-test_that("unavailable backend errors with guidance", {
-  fake <- structure(list(), class = c("deepimp_backend_keras", "deepimp_backend"))
-  # keras backend is not implemented in this plan -> build_model has no method
-  expect_error(build_model(fake, "regression", 3L, 1L, deepimp_arch()))
+test_that("a backend with no build_model method errors with guidance", {
+  # An unknown backend tag has no build_model method -> falls back to
+  # build_model.default, which raises an actionable error. (torch and keras are
+  # both implemented; this covers the not-available path generically.)
+  fake <- structure(list(name = "madeup"),
+                    class = c("deepimp_backend_madeup", "deepimp_backend"))
+  expect_error(build_model(fake, "regression", 3L, 1L, deepimp_arch()),
+               "not available")
 })
