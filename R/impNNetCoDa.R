@@ -23,7 +23,7 @@
 #' @param arch a [deepimp_arch()] object, or `NULL` to build one from `...`.
 #' @param m number of stochastic replicate completions (not valid multiple
 #'   imputation; see [impNNet()]).
-#' @param backend `"torch"` (default).
+#' @param backend `"torch"` (default) or `"keras"` (optional; requires keras3).
 #' @param iterations maximum number of chained sweeps.
 #' @param eps convergence tolerance on the standardised mean change.
 #' @param normalize standardise numeric predictors.

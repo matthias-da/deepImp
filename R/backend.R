@@ -1,6 +1,6 @@
 # Backend seam. The engine only ever calls build_model / fit_model / predict_model
 # on a backend object created by .backend(). torch is implemented in
-# backend-torch.R; keras arrives in Plan 3.
+# backend-torch.R and keras in backend-keras.R.
 
 .backend <- function(name = c("torch", "keras")) {
   if (missing(name)) name <- "torch"

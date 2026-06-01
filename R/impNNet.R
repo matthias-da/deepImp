@@ -9,7 +9,8 @@
 #' @param m number of stochastic replicate completions. NOTE: with `m > 1` these
 #'   are stochastic replicate completions, **not** valid multiple imputation
 #'   (no Rubin-rule inference).
-#' @param backend `"torch"` (default). `"keras"` arrives in a later release.
+#' @param backend `"torch"` (default) or `"keras"` (optional; requires the
+#'   keras3 package and a working Keras/TensorFlow backend).
 #' @param vartypes `"guess"` (use [guessType()]) or a length-`ncol(data)` vector.
 #' @param initialize starting values for NAs: `"knn"`, `"mean"`, or `"hotdeck"`.
 #' @param iterations maximum number of chained sweeps.
