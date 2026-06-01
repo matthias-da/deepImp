@@ -46,3 +46,6 @@ The same object is translated into a torch (and, later, keras) model.
 \examples{
 deepimp_arch(hidden = c(128, 64), dropout = 0.2)
 }
+\seealso{
+\code{\link[=impNNet]{impNNet()}}, \code{\link[=impNNetCoDa]{impNNetCoDa()}}
+}

@@ -11,6 +11,7 @@
 #' @param optimizer one of `"adam"`, `"sgd"`, `"rmsprop"`.
 #' @param learning_rate positive learning rate for the optimiser.
 #' @return an object of class `"deepimp_arch"`.
+#' @seealso [impNNet()], [impNNetCoDa()]
 #' @export
 #' @examples
 #' deepimp_arch(hidden = c(128, 64), dropout = 0.2)
