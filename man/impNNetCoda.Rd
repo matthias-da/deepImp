@@ -2,96 +2,18 @@
 % Please edit documentation in R/impNNetCoDa.R
 \name{impNNetCoDa}
 \alias{impNNetCoDa}
-\title{Imputation using neural networks}
+\title{Neural-network imputation of rounded zeros in compositional data}
 \usage{
-impNNetCoDa(
-  x,
-  initialize = "kNNa",
-  coda = TRUE,
-  dl = NULL,
-  label = NA,
-  iterations = 2,
-  eps = 1,
-  patience.val = 5,
-  epochs = 10,
-  dropout = 0.1,
-  dense = seq(1000, 100, 100),
-  optimizer = optimizer_adam(),
-  loss = "mse",
-  correction = FALSE,
-  verbose = TRUE
-)
+impNNetCoDa(x, ...)
 }
 \arguments{
-\item{x}{data.frame or matrix}
+\item{x}{a data.frame of compositional parts.}
 
-\item{initialize}{initialization of missing values}
-
-\item{dl}{detection limit as vector of length ncol(x)}
-
-\item{label}{label of the rounded zeros in x (default: NA)}
-
-\item{iterations}{number of iterations for the whole chain}
-
-\item{eps}{if mean changes over cells is less than eps, the algorithmn will stopp}
-
-\item{patience.val}{max number of epochs on which we would like to see no improvement}
-
-\item{epochs}{epochs before training is stopped. Allow training to continue for up to an additional number of epochs to allow the training process to get across flat spots and to possible find some additional improvement.}
-
-\item{dropout}{fraction rate of input units in each layer set to 0 to prevent overfitting. Dropout is only applied in the first layers.}
-
-\item{dense}{number of layers (length of vector dense) and number of units in each layer. Currently this is fixed to the default and will
-be made available in future versions.}
-
-\item{optimizer}{the optimizer used, currently fixed to adam.}
-
-\item{loss}{loss measure.}
-
-\item{correction}{currently not implemented but foreseen to be included}
-
-\item{verbose}{progress and additional information to be reported in the console (if TRUE)}
+\item{...}{currently ignored.}
 }
 \value{
-the imputed data set
+not yet implemented; currently raises an informative error.
 }
 \description{
-Imputation of rounded zeros in compositional data 
-using neural networks.
+Being rewritten on the new engine (Plan 2). Use \code{\link[=impNNet]{impNNet()}} for mixed-type data.
 }
-\details{
-tbd
-}
-\examples{
-
-expenditures <- data.frame(
-"housing" = c(640,1800,2085, 616, 875, 770, 990, 414,
-1394,1285,1102,1717,1549, 838, 845,1130,1765,1195,2180,1017),
-"foodstuffs" = c(328, 484, 445, 331, 368, 364, 415, 305, 
-440, 374, 469, 452, 454, 386, 386, 394, 466, 443, 521, 410),
-"alcohol" = c(147, 515, 725, 126, 191, 196, 284,  94, 393, 
-363, 243, 452, 424, 155, 211, 271, 524, 329, 553, 225),
-"other" = c(169,2291,8373, 117, 290, 242, 588,  68,1161, 
-785, 496,1977,1345, 208, 317, 490,2133, 974,2781, 419),
-"services" = c(196, 912,1732, 149, 275, 236, 420, 112, 
-636, 487, 388, 832, 676, 222, 280, 386, 822, 523,1010, 345)
-)
-qu <- apply(expenditures, 2, quantile, probs = 0.1)
-expenditures[expenditures[, 1] < qu[1], 1] <- NA
-expenditures[expenditures[, 2] < qu[2], 2] <- NA
-expenditures[expenditures[, 3] < qu[3], 3] <- NA
-expenditures[expenditures[, 4] < qu[4], 4] <- NA
-
-\dontrun{
-library(keras)
-library(tensorflow)
-#data(expenditures, package = "robCompositions")
-expenditures_imp <- impNNetCoDa(expenditures)
-expenditures_imp
-}
-
-}
-\author{
-Matthias Templ, Roberto Barbieri
-}
-\keyword{manip}
