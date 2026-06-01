@@ -2,32 +2,27 @@
 % Please edit documentation in R/guessType.R
 \name{guessType}
 \alias{guessType}
-\title{Guessing the variable type}
+\title{Guess the measurement type of each variable}
 \usage{
 guessType(x)
 }
 \arguments{
-\item{x}{a data.frame, data.table or tibble}
+\item{x}{a data.frame, data.table, or tibble.}
 }
 \value{
-a list of two elements with information on the guessed variable types
+a list with \code{indices} (a type-by-variable logical matrix) and \code{type}
+(a character vector, one entry per column).
 }
 \description{
-guess the type of the variables in a data set, e.g. numeric, nominal, binary and semi-continous.
-}
-\details{
-the scale of the variables plays a central role for imputing mixed type of variables. 
-The usual data types in R, such as factor, numeric, ..., are extended. Internally, the algorithm relies on the 
-following types of variables: numeric (equals numeric in base R), mixed (semi-continuous variables), 
-binary (nominal variables with two categories), nominal (like factor, but excluding binary variables), 
-count (for count variables).
+Classifies each column as \code{"numeric"}, \code{"mixed"} (semi-continuous, i.e. a spike
+of repeated values such as zeros plus a continuous part), \code{"binary"},
+\code{"nominal"}, or \code{"count"}. Used by \code{\link[=impNNet]{impNNet()}} to choose the model head, and by
+\code{summary()} of a \code{"deepimp"} object.
 }
 \examples{
-
 data(sleep, package = "VIM")
 guessType(sleep)
 }
 \author{
 Matthias Templ
 }
-\keyword{manip}
