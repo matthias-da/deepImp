@@ -1,9 +1,11 @@
 # The backend-agnostic imputation engine: per-column primitive + chained loop.
 
 #' @importFrom VIM kNN hotdeck
+#' @importFrom robCompositions impKNNa
 .initialize_na <- function(x, method = "knn") {
   switch(method,
     knn = , kNN = VIM::kNN(x, imp_var = FALSE),
+    kNNa = , knna = robCompositions::impKNNa(x)$xImp,
     hotdeck = VIM::hotdeck(x, imp_var = FALSE),
     mean = {
       for (j in seq_along(x)) {
@@ -80,7 +82,8 @@
 # Chained imputation: m replicates -> iterations -> columns -> convergence check.
 .run_chain <- function(x, types, arch, backend, initialize = "knn", iterations = 3L,
                        m = 1L, eps = 1e-2, normalize = TRUE, control = list(),
-                       validation_split = 0.2, seed = NULL, verbose = FALSE) {
+                       validation_split = 0.2, seed = NULL, verbose = FALSE,
+                       column_fn = .impute_column, column_args = list()) {
   na_mask <- is.na(x)
   start <- .initialize_na(x, initialize)
   cols <- which(colSums(na_mask) > 0)
@@ -104,8 +107,9 @@
           message(sprintf("  imputation %d/%d  iter %d/%d  var %d/%d",
                           rep_i, m, it, iterations, j, ncol(x)))
         }
-        vals <- .impute_column(j, filled, na_mask, types, arch, backend, control,
-                               normalize, validation_split)
+        vals <- do.call(column_fn,
+                        c(list(j, filled, na_mask, types, arch, backend, control,
+                               normalize, validation_split), column_args))
         filled[[j]] <- .write_back(filled[[j]], na_mask[, j], vals)
       }
       ch <- .convergence(old, filled, na_mask, types)
