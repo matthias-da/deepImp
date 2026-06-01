@@ -2,99 +2,74 @@
 % Please edit documentation in R/impNNet.R
 \name{impNNet}
 \alias{impNNet}
-\alias{guessType}
-\title{Imputation using neural networks}
+\title{Neural-network imputation for mixed-type data}
 \usage{
 impNNet(
-  x,
+  data,
+  arch = NULL,
+  m = 1L,
+  backend = c("torch", "keras"),
   vartypes = "guess",
   initialize = "knn",
-  normalize_x = TRUE,
-  normalize_y = FALSE,
-  iterations = 3,
-  eps = 1,
-  patience.val = 40,
-  epochs = 400,
-  dropout = 0.1,
-  dense = seq(1000, 100, -100),
-  optimizer = optimizer_adam(),
-  loss = "mse",
-  activation = "relu",
-  model_numeric = NULL,
-  model_binary = NULL,
-  model_nominal = NULL,
-  mi = 1,
-  small = FALSE,
-  verbose = TRUE
+  iterations = 3L,
+  eps = 0.01,
+  normalize = TRUE,
+  epochs = 400L,
+  patience = 40L,
+  validation_split = 0.2,
+  batch_size = 32L,
+  seed = NULL,
+  verbose = FALSE,
+  ...
 )
 }
 \arguments{
-\item{x}{data.frame or matrix}
+\item{data}{a data.frame (tibbles/data.tables are coerced).}
 
-\item{vartypes}{specify the scale of each variable as a vector. For further details see below.}
+\item{arch}{a \code{\link[=deepimp_arch]{deepimp_arch()}} object, or \code{NULL} to build one from \code{...}.
+Supplying both \code{arch} and architecture scalars via \code{...} is an error.}
 
-\item{initialize}{initialization of missing values}
+\item{m}{number of stochastic replicate completions. NOTE: with \code{m > 1} these
+are stochastic replicate completions, \strong{not} valid multiple imputation
+(no Rubin-rule inference).}
 
-\item{iterations}{number of iterations for the whole chain}
+\item{backend}{\code{"torch"} (default). \code{"keras"} arrives in a later release.}
 
-\item{eps}{if mean changes over cells is less than eps, the algorithmn will stopp}
+\item{vartypes}{\code{"guess"} (use \code{\link[=guessType]{guessType()}}) or a length-\code{ncol(data)} vector.}
 
-\item{patience.val}{max number of epochs on which we would like to see no improvement}
+\item{initialize}{starting values for NAs: \code{"knn"}, \code{"mean"}, or \code{"hotdeck"}.}
 
-\item{epochs}{epochs before training is stopped. Allow training to continue for up to an additional number of epochs to allow the training process to get across flat spots and to possible find some additional improvement.}
+\item{iterations}{maximum number of chained sweeps.}
 
-\item{dropout}{fraction rate of input units in each layer set to 0 to prevent overfitting. Dropout is only applied in the first layers.}
+\item{eps}{convergence tolerance on the standardised mean change.}
 
-\item{dense}{number of layers (length of vector dense) and number of units in each layer. Currently this is fixed to the default and will
-be made available in future versions.}
+\item{normalize}{standardise numeric predictors.}
 
-\item{optimizer}{the optimizer used, currently fixed to adam.}
+\item{epochs, patience, validation_split, batch_size}{training controls.}
 
-\item{loss}{loss measure.}
+\item{seed}{optional integer seed (sets R and torch RNGs).}
 
-\item{model_numeric}{if NULL, a predefined model for numeric variables is chosen. For the specification of a model, see 
-\code{\link[keras]{keras_model_sequential}}.}
+\item{verbose}{print progress.}
 
-\item{model_binary}{if NULL, a predefined model for numeric variables is chosen. For the specification of a model, see 
-\code{\link[keras]{keras_model_sequential}}.}
-
-\item{model_nominal}{if NULL, a predefined model for numeric variables is chosen. For the specification of a model, see 
-\code{\link[keras]{keras_model_sequential}}.}
-
-\item{mi}{number of multiple imputations}
-
-\item{small}{for small data sets, a model with less layers and neurons is used}
-
-\item{verbose}{progress and additional information to be reported in the console (if TRUE)}
-
-\item{normalize}{normalization of input data (numeric part)}
+\item{...}{architecture scalar overrides forwarded to \code{\link[=deepimp_arch]{deepimp_arch()}}.}
 }
 \value{
-the imputed data set
+a \code{"deepimp"} object; read the data with \code{\link[=getImputed]{getImputed()}}.
 }
 \description{
-Imputation for numeric, nominal, binary and semi-continous variables 
-using neural networks.
-}
-\details{
-the scale of the variables plays a central role within the algorithm. 
-The usual data types in R, such as factor, numeric, ..., are extended. Internally, the algorithm relies on the 
-following types of variables: numeric (equals numeric in base R), mixed (semi-continuous variables), 
-binary (nominal variables with two categories), nominal (like factor, but excluding binary variables), 
-count (for count variables).
-If vartypes equals guess, then the variable scale types are estimated. 
-If verbose equals TRUE, the outcome of this estimation is printed to the console.
+Iterative, chained imputation of numeric, count, semi-continuous, binary and
+nominal variables with a configurable multilayer perceptron (torch backend).
 }
 \examples{
-
-data(sleep, package = "VIM")
 \dontrun{
-sleep_imp <- impNNet(sleep)
-sleep_imp
+data(sleep, package = "VIM")
+imp <- impNNet(sleep, arch = deepimp_arch_small(), epochs = 50)
+head(getImputed(imp))
 }
-
+}
+\seealso{
+\code{\link[=deepimp_arch]{deepimp_arch()}}, \code{\link[=getImputed]{getImputed()}}, \code{\link[=guessType]{guessType()}}
 }
 \author{
-Matthias Templ, Roberto Barbieri
+Matthias Templ
 }
-\keyword{manip}
