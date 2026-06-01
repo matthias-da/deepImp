@@ -62,7 +62,10 @@ imputation; see \code{\link[=impNNet]{impNNet()}}).}
 
 \item{epochs, patience, validation_split, batch_size}{training controls.}
 
-\item{seed}{optional integer seed (sets R and torch RNGs).}
+\item{seed}{optional integer seed (sets the R and backend RNGs). Exact
+reproducibility is guaranteed when \code{dropout = 0}; with \code{dropout > 0} the
+backend's training-time mask sampling is not fully pinned by the seed in the
+current torch build, so repeated runs are close but may not be bit-identical.}
 
 \item{verbose}{print progress.}
 

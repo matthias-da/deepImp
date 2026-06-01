@@ -28,7 +28,10 @@
 #' @param eps convergence tolerance on the standardised mean change.
 #' @param normalize standardise numeric predictors.
 #' @param epochs,patience,validation_split,batch_size training controls.
-#' @param seed optional integer seed (sets R and torch RNGs).
+#' @param seed optional integer seed (sets the R and backend RNGs). Exact
+#'   reproducibility is guaranteed when `dropout = 0`; with `dropout > 0` the
+#'   backend's training-time mask sampling is not fully pinned by the seed in the
+#'   current torch build, so repeated runs are close but may not be bit-identical.
 #' @param verbose print progress.
 #' @param ... architecture scalar overrides forwarded to [deepimp_arch()].
 #' @return a `"deepimp"` object; read the data with [getImputed()].
