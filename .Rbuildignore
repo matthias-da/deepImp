@@ -9,3 +9,5 @@
 ^inst/doc/.*$
 ^CLAUDE\.md$
 ^backup$
+^doc$
+^Meta$

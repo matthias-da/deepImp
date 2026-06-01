@@ -29,43 +29,6 @@
 #' imp <- impNNet(sleep, arch = deepimp_arch_small(), epochs = 50)
 #' head(getImputed(imp))
 #' }
-# Map legacy impNNet() argument names (pre-1.1.0) onto the new API. Returns a list
-# with possibly-updated `arch` and `normalize`, and the non-legacy remainder of
-# `dots` to flow into the normal arch-vs-... logic.
-.handle_deprecated_args <- function(dots, arch, normalize) {
-  removed <- intersect(names(dots), c("model_numeric", "model_binary", "model_nominal", "loss"))
-  if (length(removed)) {
-    stop("`", removed[1], "` was removed in deepImp 1.1.0; configure the network via ",
-         "`arch = deepimp_arch(...)` and `backend=`.", call. = FALSE)
-  }
-  if ("dense" %in% names(dots)) {
-    warning("`dense` is deprecated; use `arch = deepimp_arch(hidden = ...)`. ",
-            "Mapping for this call.", call. = FALSE)
-    if (!is.null(arch)) {
-      stop("Cannot use deprecated `dense` together with an explicit `arch`.", call. = FALSE)
-    }
-    arch <- deepimp_arch(hidden = dots$dense)
-    dots$dense <- NULL
-  }
-  if ("small" %in% names(dots)) {
-    warning("`small` is deprecated; use `arch = deepimp_arch_small()`. Mapping for this call.",
-            call. = FALSE)
-    if (isTRUE(dots$small) && is.null(arch)) arch <- deepimp_arch_small()
-    dots$small <- NULL
-  }
-  if ("normalize_x" %in% names(dots)) {
-    warning("`normalize_x` is deprecated; use `normalize`. Mapping for this call.", call. = FALSE)
-    normalize <- isTRUE(dots$normalize_x)
-    dots$normalize_x <- NULL
-  }
-  if ("normalize_y" %in% names(dots)) {
-    warning("`normalize_y` is deprecated and ignored; target standardisation is now automatic.",
-            call. = FALSE)
-    dots$normalize_y <- NULL
-  }
-  list(arch = arch, normalize = normalize, dots = dots)
-}
-
 impNNet <- function(data, arch = NULL, m = 1L, backend = c("torch", "keras"),
                     vartypes = "guess", initialize = "knn", iterations = 3L,
                     eps = 1e-2, normalize = TRUE, epochs = 400L, patience = 40L,
@@ -108,4 +71,42 @@ impNNet <- function(data, arch = NULL, m = 1L, backend = c("torch", "keras"),
                 convergence = res$convergence, seeds = res$seeds,
                 n_missing = sum(res$na_mask))
   )
+}
+
+# Map legacy impNNet() argument names (pre-1.1.0) onto the new API. Returns a list
+# with possibly-updated `arch` and `normalize`, and the non-legacy remainder of
+# `dots` to flow into the normal arch-vs-... logic.
+#' @noRd
+.handle_deprecated_args <- function(dots, arch, normalize) {
+  removed <- intersect(names(dots), c("model_numeric", "model_binary", "model_nominal", "loss"))
+  if (length(removed)) {
+    stop("`", removed[1], "` was removed in deepImp 1.1.0; configure the network via ",
+         "`arch = deepimp_arch(...)` and `backend=`.", call. = FALSE)
+  }
+  if ("dense" %in% names(dots)) {
+    warning("`dense` is deprecated; use `arch = deepimp_arch(hidden = ...)`. ",
+            "Mapping for this call.", call. = FALSE)
+    if (!is.null(arch)) {
+      stop("Cannot use deprecated `dense` together with an explicit `arch`.", call. = FALSE)
+    }
+    arch <- deepimp_arch(hidden = dots$dense)
+    dots$dense <- NULL
+  }
+  if ("small" %in% names(dots)) {
+    warning("`small` is deprecated; use `arch = deepimp_arch_small()`. Mapping for this call.",
+            call. = FALSE)
+    if (isTRUE(dots$small) && is.null(arch)) arch <- deepimp_arch_small()
+    dots$small <- NULL
+  }
+  if ("normalize_x" %in% names(dots)) {
+    warning("`normalize_x` is deprecated; use `normalize`. Mapping for this call.", call. = FALSE)
+    normalize <- isTRUE(dots$normalize_x)
+    dots$normalize_x <- NULL
+  }
+  if ("normalize_y" %in% names(dots)) {
+    warning("`normalize_y` is deprecated and ignored; target standardisation is now automatic.",
+            call. = FALSE)
+    dots$normalize_y <- NULL
+  }
+  list(arch = arch, normalize = normalize, dots = dots)
 }

@@ -1,0 +1,89 @@
+---
+title: "Neural-network imputation with deepImp"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Neural-network imputation with deepImp}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+## Overview
+
+`deepImp` imputes missing values with configurable neural networks, for both
+mixed-type data (`impNNet()`) and compositional data with rounded zeros
+(`impNNetCoDa()`). Networks run on a native **torch** backend by default (no
+Python required) or, optionally, on **keras3**. The architecture is described by
+a `deepimp_arch()` object.
+
+```{r}
+library(deepImp)
+arch <- deepimp_arch(hidden = c(128, 64), dropout = 0.1, activation = "relu")
+arch
+```
+
+## Mixed-type imputation
+
+The `beer` data (bundled) contains volatile-compound measurements. We introduce
+missing values completely at random and impute them.
+
+```{r, eval = FALSE}
+data(beer, package = "deepImp")
+set.seed(1)
+b <- beer
+b[cbind(sample(nrow(b), 20), sample(ncol(b), 20, replace = TRUE))] <- NA
+
+imp <- impNNet(b, arch = deepimp_arch_small(), epochs = 100, seed = 1)
+imp
+completed <- getImputed(imp)
+head(completed)
+```
+
+`getImputed(imp)` returns the completed data frame; `summary(imp)` reports the
+imputed cells per variable and `plot(imp)` shows the convergence of the chained
+imputation.
+
+## Compositional data: rounded zeros
+
+For compositional data, values below a detection limit ("rounded zeros") are
+imputed in log-ratio coordinates and censored at the limit, following
+Templ (2021). Detection limits are supplied via `dl`.
+
+```{r, eval = FALSE}
+data(expenditures, package = "robCompositions")
+x <- expenditures
+dl <- apply(x, 2, function(z) 0.1 * min(z[z > 0]))   # example detection limits
+x[x < matrix(dl, nrow(x), ncol(x), byrow = TRUE)] <- 0
+
+imp <- impNNetCoDa(x, dl = dl, label = 0, correction = "truncate",
+                   arch = deepimp_arch_small(), epochs = 100, seed = 1)
+head(getImputed(imp))
+```
+
+`correction = "truncate"` (default) sets imputed parts above the detection limit
+to the limit, as in Templ (2021); `"expectation"` uses a truncated-normal mean;
+`"none"` disables censoring.
+
+## Backends and reproducibility
+
+Select the backend per call with `backend = "torch"` (default) or
+`backend = "keras"` (requires `keras3` and `keras3::install_keras()`). A `seed`
+makes a run reproducible within a backend; the two backends do not produce
+identical numbers.
+
+```{r, eval = FALSE}
+imp_keras <- impNNet(b, backend = "keras", arch = deepimp_arch_small(),
+                     epochs = 100, seed = 1)
+```
+
+Note: with `m > 1`, `impNNet()`/`impNNetCoDa()` return several completed data
+sets, but these are stochastic replicate completions, **not** statistically
+valid multiple imputation.
+
+## Reference
+
+Templ, M. (2021). Imputation of rounded zeros for high-dimensional compositional
+data using neural networks.

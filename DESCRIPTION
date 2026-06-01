@@ -23,7 +23,11 @@ Imports:
     utils,
     graphics
 Suggests:
+    keras3,
+    knitr,
+    rmarkdown,
     testthat (>= 3.0.0)
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Config/testthat/edition: 3
+VignetteBuilder: knitr
