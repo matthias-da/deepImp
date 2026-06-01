@@ -24,10 +24,12 @@
 #' @seealso [deepimp_arch()], [getImputed()], [guessType()]
 #' @export
 #' @examples
-#' \dontrun{
-#' data(sleep, package = "VIM")
-#' imp <- impNNet(sleep, arch = deepimp_arch_small(), epochs = 50)
-#' head(getImputed(imp))
+#' if (requireNamespace("torch", quietly = TRUE)) {
+#' \donttest{
+#'   data(sleep, package = "VIM")
+#'   imp <- impNNet(sleep, arch = deepimp_arch_small(), epochs = 5, seed = 1)
+#'   head(getImputed(imp))
+#' }
 #' }
 impNNet <- function(data, arch = NULL, m = 1L, backend = c("torch", "keras"),
                     vartypes = "guess", initialize = "knn", iterations = 3L,

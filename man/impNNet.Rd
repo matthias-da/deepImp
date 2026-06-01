@@ -61,10 +61,12 @@ Iterative, chained imputation of numeric, count, semi-continuous, binary and
 nominal variables with a configurable multilayer perceptron (torch backend).
 }
 \examples{
-\dontrun{
-data(sleep, package = "VIM")
-imp <- impNNet(sleep, arch = deepimp_arch_small(), epochs = 50)
-head(getImputed(imp))
+if (requireNamespace("torch", quietly = TRUE)) {
+\donttest{
+  data(sleep, package = "VIM")
+  imp <- impNNet(sleep, arch = deepimp_arch_small(), epochs = 5, seed = 1)
+  head(getImputed(imp))
+}
 }
 }
 \seealso{

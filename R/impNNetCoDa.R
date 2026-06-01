@@ -38,11 +38,15 @@
 #'   compositional data.
 #' @export
 #' @examples
-#' \dontrun{
-#' x <- data.frame(a = runif(50, 5, 10), b = runif(50, 5, 10), c = runif(50, 5, 10))
-#' x$a[1:5] <- 0
-#' imp <- impNNetCoDa(x, dl = c(1, 1, 1), label = 0, arch = deepimp_arch_small())
-#' head(getImputed(imp))
+#' if (requireNamespace("torch", quietly = TRUE)) {
+#' \donttest{
+#'   set.seed(1)
+#'   x <- data.frame(a = runif(50, 5, 10), b = runif(50, 5, 10), c = runif(50, 5, 10))
+#'   x$a[1:5] <- 0
+#'   imp <- impNNetCoDa(x, dl = c(1, 1, 1), label = 0,
+#'                      arch = deepimp_arch_small(), epochs = 5, seed = 1)
+#'   head(getImputed(imp))
+#' }
 #' }
 impNNetCoDa <- function(x, dl = NULL, label = 0, coda = TRUE,
                         correction = c("truncate", "expectation", "none"),
