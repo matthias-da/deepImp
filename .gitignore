@@ -5,3 +5,5 @@
 .claude/
 /doc/
 /Meta/
+*.tar.gz
+*.Rcheck

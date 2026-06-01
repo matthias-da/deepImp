@@ -6,7 +6,7 @@
 ^[^/]*\.pdf$
 ^[^/]*\.jpeg$
 ^[^/]*\.rda$
-^inst/doc/.*$
+^dev-materials$
 ^CLAUDE\.md$
 ^backup$
 ^doc$
