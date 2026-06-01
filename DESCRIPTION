@@ -1,34 +1,29 @@
 Package: deepImp
 Type: Package
-Title: Imputation with deep learning methods
-Version: 1.0.1
+Title: Imputation with Deep Learning Methods
+Version: 1.1.0
 Authors@R: c(
-  person("Matthias", "Templ", email="matthias.templ@gmail.com", role = c("aut", "cre"), comment=c(ORCID="0000-0002-8638-5276")))
-Description: Imputation with deep learing methods such as neural nets. The theoretical basis for the methods implemented can be found in Templ (2020) <doi:XXX>.
+  person("Matthias", "Templ", email = "matthias.templ@gmail.com",
+         role = c("aut", "cre"), comment = c(ORCID = "0000-0002-8638-5276")))
+Description: Imputation of mixed-type and compositional data with neural networks. The
+    architecture (number and size of hidden layers, dropout, activation, optimiser) is
+    user-configurable. See Templ (2021) <doi:10.1007/978-3-030-71175-7>.
+License: GPL-2
+Encoding: UTF-8
 LazyData: TRUE
 ByteCompile: TRUE
 Depends:
-    R (>= 3.5)
-Suggests:
-    keras,tensorflow,VIM
+    R (>= 4.1)
 Imports:
-    keras,
-    utils,
+    torch,
+    luz,
+    VIM,
     stats,
-    graphics,
-    magrittr,
-    tools,
-    methods,
-    data.table,
+    utils,
+    graphics
+Suggests:
     robCompositions,
-    tensorflow,
-    VIM
-License: GPL-2
-URL: https://bitbucket.org/matthias-da/deepimp/
-Collate:
-    'guessType.R'
-    'impNNet.R'
-    'impNNetCoDa.R'
-RoxygenNote: 7.1.2
-VignetteBuilder: knitr
-Encoding: UTF-8
+    testthat (>= 3.0.0)
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Config/testthat/edition: 3

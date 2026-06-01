@@ -1,0 +1,11 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.Rhistory$
+^docs$
+^\.claude$
+^[^/]*\.pdf$
+^[^/]*\.jpeg$
+^[^/]*\.rda$
+^inst/doc/.*$
+^CLAUDE\.md$
+^backup$
