@@ -52,3 +52,38 @@ test_that("torch backend builds, fits, and predicts for classification", {
   expect_equal(dim(probs), c(10L, 2L))
   expect_true(all(abs(rowSums(probs) - 1) < 1e-5))
 })
+
+test_that("singleton final training batch does not empty the validation loader (early-stopping safe)", {
+  skip_if_not_installed("torch"); skip_if_not_installed("luz")
+  set.seed(11); torch::torch_manual_seed(11)
+  # n_train = 33, batch_size = 32 -> 33 %% 32 == 1 would, under a shared drop_last,
+  # also drop the single validation batch and crash luz early stopping. The backend
+  # must instead shrink the batch size so training keeps a non-singleton last batch
+  # and the validation loss is still computed.
+  x <- matrix(rnorm(33 * 3), ncol = 3); y <- x[, 1] - x[, 2]
+  xv <- matrix(rnorm(10 * 3), ncol = 3); yv <- xv[, 1] - xv[, 2]
+  b <- .backend("torch")
+  m <- build_model(b, "regression", 3L, 1L, deepimp_arch_small())
+  expect_no_error(
+    fit <- fit_model(b, m, x, y, xv, yv,
+                     control = list(epochs = 5L, patience = 3L, batch_size = 32L,
+                                    verbose = FALSE))
+  )
+  expect_length(predict_model(b, fit$model, x), 33L)
+})
+
+test_that("impNNet imputes a small mixed-type frame end to end (beer-like, regression + binary)", {
+  skip_if_not_installed("torch"); skip_if_not_installed("luz")
+  set.seed(12)
+  n <- 86L
+  df <- data.frame(
+    a = rnorm(n), b = rnorm(n), c = rnorm(n),
+    grp = factor(sample(c("x", "y"), n, replace = TRUE))
+  )
+  # sparse MCAR holes (1-3 per column) reproduce the n_train %% batch_size == 1 regime
+  for (j in seq_len(ncol(df))) df[sample(n, sample(1:3, 1)), j] <- NA
+  expect_no_error(
+    imp <- impNNet(df, arch = deepimp_arch_small(), epochs = 20L, seed = 1)
+  )
+  expect_false(anyNA(getImputed(imp)))
+})

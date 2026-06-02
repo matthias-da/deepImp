@@ -102,10 +102,20 @@ fit_model.deepimp_backend_torch <- function(backend, model, train_x, train_y,
   xtrain <- torch::torch_tensor(as.matrix(train_x), dtype = torch::torch_float())
   xvalid <- torch::torch_tensor(as.matrix(valid_x), dtype = torch::torch_float())
 
-  # Drop the final training batch only when it would be a singleton, which would
-  # otherwise crash nn_batch_norm1d (variance over one sample).
-  drop_last <- (nrow(as.matrix(train_x)) %% batch_size == 1L)
+  # A singleton final TRAINING batch crashes nn_batch_norm1d (variance over one
+  # sample). luz shares `dataloader_options` between the training and validation
+  # loaders, so `drop_last = TRUE` would also drop a single-batch validation set,
+  # leaving no `valid_loss` and crashing early stopping. Instead, avoid the
+  # singleton by shrinking the batch size when the training set is congruent to 1
+  # modulo batch_size; this never empties the validation loader.
+  n_train <- nrow(as.matrix(train_x))
+  if (batch_size > 2L && n_train %% batch_size == 1L) batch_size <- batch_size - 1L
 
+  # Train on CPU. Imputation here is small tabular work that gains nothing from a
+  # GPU/MPS device, MPS op-coverage is incomplete, and on Apple Silicon the MPS
+  # validation pass can fail to produce the monitored `valid_loss`, which crashes
+  # `luz_callback_early_stopping`. Pinning to CPU also underpins the exact-
+  # reproducibility guarantee (single-threaded CPU, dropout = 0).
   fitted <- model$module |>
     luz::setup(loss = loss_fn, optimizer = opt_fn) |>
     luz::set_hparams(input_dim = model$input_dim, output_dim = model$output_dim,
@@ -115,10 +125,10 @@ fit_model.deepimp_backend_torch <- function(backend, model, train_x, train_y,
       data = list(xtrain, ytrain),
       epochs = epochs,
       valid_data = list(xvalid, yvalid),
+      accelerator = luz::accelerator(cpu = TRUE),
       callbacks = list(luz::luz_callback_early_stopping(
         monitor = "valid_loss", patience = patience)),
-      dataloader_options = list(batch_size = batch_size, shuffle = TRUE,
-                                drop_last = drop_last),
+      dataloader_options = list(batch_size = batch_size, shuffle = TRUE),
       verbose = verbose
     )
 
