@@ -19,6 +19,14 @@ Major rewrite of the package for a configurable, dual-backend neural-network imp
   current torch build (repeated runs are close but may not be bit-identical).
 * A vignette, `vignette("deepImp")`, and a package overview page (`?deepImp`).
 
+## Bug fixes
+
+* `impNNetCoDa(initialize = "kNNa")` no longer aborts at high rounded-zero rates.
+  The compositional-kNN initialiser (`robCompositions::impKNNa()`) can fail with
+  `'probs' not in [0, 1]` when a large fraction of every part falls below the
+  detection limit; the initialiser now falls back to `knn` (with a warning)
+  instead of stopping the imputation.
+
 ## Deprecations and breaking changes
 
 * `impNNet()` was redesigned. Legacy arguments `dense`, `small`, `normalize_x`, and

@@ -5,7 +5,13 @@
 .initialize_na <- function(x, method = "knn") {
   switch(method,
     knn = , kNN = VIM::kNN(x, imp_var = FALSE),
-    kNNa = , knna = as.data.frame(robCompositions::impKNNa(x)$xImp),
+    kNNa = , knna = tryCatch(
+      as.data.frame(robCompositions::impKNNa(x)$xImp),
+      error = function(e) {
+        warning("kNNa initialisation (robCompositions::impKNNa) failed (",
+                conditionMessage(e), "); falling back to knn.", call. = FALSE)
+        VIM::kNN(x, imp_var = FALSE)
+      }),
     hotdeck = VIM::hotdeck(x, imp_var = FALSE),
     mean = {
       for (j in seq_along(x)) {
