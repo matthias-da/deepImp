@@ -100,9 +100,9 @@ plot.deepimp <- function(x, ...) {
   graphics::plot(
     seq_along(trace), trace,
     type = "b",
-    xlab = "iteration",
+    xlab = "sweep",
     ylab = "mean change in imputed cells",
-    main = "deepimp convergence"
+    main = "deepImp convergence"
   )
   invisible(x)
 }
