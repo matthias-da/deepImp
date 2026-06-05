@@ -34,10 +34,15 @@ skip_if_no_torch <- function() {
 }
 
 skip_if_no_keras <- function() {
+  # The keras backend needs a provisioned Python + TensorFlow env. On CRAN/win-builder
+  # reticulate would auto-install one during the check (~50 Python packages) -- slow,
+  # fragile, and against CRAN's "do not install during checks" spirit -- so never run
+  # keras tests on CRAN. They still run locally / in CI (devtools sets NOT_CRAN=true).
+  testthat::skip_on_cran()
   testthat::skip_if_not_installed("keras3")
   # keras3 (R) installed != Python keras / TensorFlow available. Probe the backend
   # exactly as build_model() does (build an empty Sequential model); skip if it
-  # errors, e.g. "No module named 'keras'" on CRAN / win-builder.
+  # errors, e.g. "No module named 'keras'".
   ok <- tryCatch({ keras3::keras_model_sequential(); TRUE },
                  error = function(e) FALSE)
   if (!ok) testthat::skip("Python keras backend (keras / TensorFlow) not available")

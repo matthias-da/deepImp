@@ -102,7 +102,13 @@
     seeds[rep_i] <- if (is.null(seed)) NA_integer_ else as.integer(seed + rep_i - 1L)
     if (!is.na(seeds[rep_i])) {
       set.seed(seeds[rep_i])
-      if (requireNamespace("torch", quietly = TRUE)) torch::torch_manual_seed(seeds[rep_i])
+      # Seed torch only for the torch backend, and only when its native runtime is
+      # present. The torch R package is a hard dependency (so requireNamespace is
+      # always TRUE), but on CRAN/win-builder libtorch ("Lantern") is not installed;
+      # seeding it on the keras path then errors ("Lantern is not loaded").
+      if (inherits(backend, "deepimp_backend_torch") && torch::torch_is_installed()) {
+        torch::torch_manual_seed(seeds[rep_i])
+      }
     }
     filled <- start
     changes <- numeric(0)
