@@ -33,7 +33,8 @@ Supplying both \code{arch} and architecture scalars via \code{...} is an error.}
 are stochastic replicate completions, \strong{not} valid multiple imputation
 (no Rubin-rule inference).}
 
-\item{backend}{\code{"torch"} (default). \code{"keras"} arrives in a later release.}
+\item{backend}{\code{"torch"} (default) or \code{"keras"} (optional; requires the
+keras3 package and a working Keras/TensorFlow backend).}
 
 \item{vartypes}{\code{"guess"} (use \code{\link[=guessType]{guessType()}}) or a length-\code{ncol(data)} vector.}
 
@@ -64,7 +65,7 @@ Iterative, chained imputation of numeric, count, semi-continuous, binary and
 nominal variables with a configurable multilayer perceptron (torch backend).
 }
 \examples{
-if (requireNamespace("torch", quietly = TRUE)) {
+if (requireNamespace("torch", quietly = TRUE) && torch::torch_is_installed()) {
 \donttest{
   data(sleep, package = "VIM")
   imp <- impNNet(sleep, arch = deepimp_arch_small(), epochs = 5, seed = 1)

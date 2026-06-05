@@ -1,5 +1,5 @@
 test_that("impNNet recovers a linear signal better than mean imputation", {
-  skip_if_not_installed("torch"); skip_if_not_installed("luz")
+  skip_if_no_torch()
   set.seed(101)
   n <- 150L
   df <- data.frame(x1 = rnorm(n), x2 = rnorm(n))
@@ -15,7 +15,7 @@ test_that("impNNet recovers a linear signal better than mean imputation", {
 })
 
 test_that("impNNet classifies a near-deterministic factor above base rate", {
-  skip_if_not_installed("torch"); skip_if_not_installed("luz")
+  skip_if_no_torch()
   set.seed(102)
   n <- 200L
   x1 <- rnorm(n)
@@ -32,7 +32,7 @@ test_that("impNNet classifies a near-deterministic factor above base rate", {
 })
 
 test_that("impNNet keeps a count column integer-valued and non-negative", {
-  skip_if_not_installed("torch"); skip_if_not_installed("luz")
+  skip_if_no_torch()
   set.seed(103)
   n <- 80L
   df <- data.frame(x1 = rnorm(n), cnt = rpois(n, 4))
@@ -45,7 +45,7 @@ test_that("impNNet keeps a count column integer-valued and non-negative", {
 })
 
 test_that("impNNetCoDa beats 0.65*dl constant replacement in Aitchison distance", {
-  skip_if_not_installed("torch"); skip_if_not_installed("luz")
+  skip_if_no_torch()
   skip_if_not_installed("robCompositions")
   set.seed(104)
   n <- 120L
@@ -69,7 +69,7 @@ test_that("impNNetCoDa beats 0.65*dl constant replacement in Aitchison distance"
 })
 
 test_that("impNNet is exactly reproducible with the same seed when dropout = 0", {
-  skip_if_not_installed("torch"); skip_if_not_installed("luz")
+  skip_if_no_torch()
   set.seed(105)
   df <- data.frame(x1 = rnorm(40), x2 = rnorm(40)); df$x1[1:5] <- NA
   # Exact reproducibility holds when dropout = 0. With dropout > 0 the torch
@@ -83,7 +83,7 @@ test_that("impNNet is exactly reproducible with the same seed when dropout = 0",
 })
 
 test_that("impNNet with dropout is stable (close, not necessarily identical) across seeds", {
-  skip_if_not_installed("torch"); skip_if_not_installed("luz")
+  skip_if_no_torch()
   set.seed(105)
   df <- data.frame(x1 = rnorm(60), x2 = rnorm(60))
   df$x1 <- df$x1 + 0.5 * df$x2
@@ -96,7 +96,7 @@ test_that("impNNet with dropout is stable (close, not necessarily identical) acr
 })
 
 test_that("impNNet handles edge cases: 2 columns, single NA, full column, constant predictor", {
-  skip_if_not_installed("torch"); skip_if_not_installed("luz")
+  skip_if_no_torch()
   set.seed(106)
   # 2-column data (a past bug)
   d2 <- data.frame(x1 = rnorm(40), x2 = rnorm(40)); d2$x1[1:3] <- NA
@@ -120,7 +120,7 @@ test_that("impNNet handles edge cases: 2 columns, single NA, full column, consta
 })
 
 test_that("impNNet keras backend also beats mean on the linear signal", {
-  skip_if_not_installed("keras3")
+  skip_if_no_keras()
   set.seed(107)
   n <- 150L
   df <- data.frame(x1 = rnorm(n), x2 = rnorm(n))

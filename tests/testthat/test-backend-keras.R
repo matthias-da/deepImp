@@ -1,5 +1,5 @@
 test_that("keras regression backend trains, predicts finite, and beats the mean", {
-  skip_if_not_installed("keras3")
+  skip_if_no_keras()
   set.seed(1)
   n <- 120L
   x <- matrix(rnorm(n * 2), ncol = 2)
@@ -20,7 +20,7 @@ test_that("keras regression backend trains, predicts finite, and beats the mean"
 })
 
 test_that("keras classification returns a probability matrix and beats base rate", {
-  skip_if_not_installed("keras3")
+  skip_if_no_keras()
   set.seed(2)
   n <- 150L
   x <- matrix(rnorm(n * 2), ncol = 2)
@@ -42,7 +42,7 @@ test_that("keras classification returns a probability matrix and beats base rate
 })
 
 test_that("keras backend honours arch depth/width without batchnorm/dropout", {
-  skip_if_not_installed("keras3")
+  skip_if_no_keras()
   set.seed(3)
   n <- 40L
   x <- matrix(rnorm(n * 2), ncol = 2); y <- x[, 1]

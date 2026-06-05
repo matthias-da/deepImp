@@ -4,7 +4,7 @@ test_that("impNNetCoDa errors when a correction needs dl but it is missing", {
 })
 
 test_that("impNNetCoDa imputes rounded zeros as strictly positive values <= dl", {
-  skip_if_not_installed("torch"); skip_if_not_installed("luz")
+  skip_if_no_torch()
   skip_if_not_installed("robCompositions")
   set.seed(1)
   n <- 60L
@@ -21,7 +21,7 @@ test_that("impNNetCoDa imputes rounded zeros as strictly positive values <= dl",
 })
 
 test_that("impNNetCoDa records coda/dl/correction in info", {
-  skip_if_not_installed("torch"); skip_if_not_installed("luz")
+  skip_if_no_torch()
   set.seed(2)
   n <- 40L
   x <- data.frame(a = runif(n, 5, 10), b = runif(n, 5, 10), c = runif(n, 5, 10))

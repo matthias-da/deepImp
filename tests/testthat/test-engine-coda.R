@@ -38,7 +38,7 @@ test_that("pivotCoord round-trips a known composition (closure)", {
 })
 
 test_that(".impute_column_coda fills rounded zeros below the detection limit", {
-  skip_if_not_installed("torch"); skip_if_not_installed("luz")
+  skip_if_no_torch()
   skip_if_not_installed("robCompositions")
   set.seed(1); torch::torch_manual_seed(1)
   n <- 50L

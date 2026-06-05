@@ -52,7 +52,7 @@ compositional kNN), \code{"knn"}, \code{"hotdeck"}, or \code{"mean"}.}
 \item{m}{number of stochastic replicate completions (not valid multiple
 imputation; see \code{\link[=impNNet]{impNNet()}}).}
 
-\item{backend}{\code{"torch"} (default).}
+\item{backend}{\code{"torch"} (default) or \code{"keras"} (optional; requires keras3).}
 
 \item{iterations}{maximum number of chained sweeps.}
 
@@ -82,7 +82,7 @@ coordinates, regressed on the remaining coordinates, censored at the detection
 limit, and back-transformed with preservation of the observed absolute values.
 }
 \examples{
-if (requireNamespace("torch", quietly = TRUE)) {
+if (requireNamespace("torch", quietly = TRUE) && torch::torch_is_installed()) {
 \donttest{
   set.seed(1)
   x <- data.frame(a = runif(50, 5, 10), b = runif(50, 5, 10), c = runif(50, 5, 10))

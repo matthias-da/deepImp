@@ -1,6 +1,5 @@
 test_that("impNNet returns a deepimp object and imputes all NAs", {
-  skip_if_not_installed("torch")
-  skip_if_not_installed("luz")
+  skip_if_no_torch()
   set.seed(123)
   n <- 60L
   dat <- data.frame(
@@ -28,8 +27,7 @@ test_that("impNNet errors if both arch and ... arch-scalars are given", {
 })
 
 test_that("impNNet builds arch from ... when arch is NULL", {
-  skip_if_not_installed("torch")
-  skip_if_not_installed("luz")
+  skip_if_no_torch()
   set.seed(7)
   n <- 40L
   dat <- data.frame(x1 = rnorm(n), x2 = rnorm(n))

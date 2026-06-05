@@ -1,7 +1,6 @@
 test_that("torch and keras both impute and beat mean-imputation on a known DGP", {
-  skip_if_not_installed("torch")
-  skip_if_not_installed("luz")
-  skip_if_not_installed("keras3")
+  skip_if_no_torch()
+  skip_if_no_keras()
   set.seed(11)
   n <- 120L
   df <- data.frame(x1 = rnorm(n), x2 = rnorm(n))

@@ -1,6 +1,5 @@
 test_that("torch backend builds, fits, and predicts for regression", {
-  skip_if_not_installed("torch")
-  skip_if_not_installed("luz")
+  skip_if_no_torch()
 
   set.seed(1)
   torch::torch_manual_seed(1)
@@ -26,8 +25,7 @@ test_that("torch backend builds, fits, and predicts for regression", {
 })
 
 test_that("torch backend builds, fits, and predicts for classification", {
-  skip_if_not_installed("torch")
-  skip_if_not_installed("luz")
+  skip_if_no_torch()
 
   set.seed(2)
   torch::torch_manual_seed(2)
@@ -54,7 +52,7 @@ test_that("torch backend builds, fits, and predicts for classification", {
 })
 
 test_that("singleton final training batch does not empty the validation loader (early-stopping safe)", {
-  skip_if_not_installed("torch"); skip_if_not_installed("luz")
+  skip_if_no_torch()
   set.seed(11); torch::torch_manual_seed(11)
   # n_train = 33, batch_size = 32 -> 33 %% 32 == 1 would, under a shared drop_last,
   # also drop the single validation batch and crash luz early stopping. The backend
@@ -73,7 +71,7 @@ test_that("singleton final training batch does not empty the validation loader (
 })
 
 test_that("impNNet imputes a small mixed-type frame end to end (beer-like, regression + binary)", {
-  skip_if_not_installed("torch"); skip_if_not_installed("luz")
+  skip_if_no_torch()
   set.seed(12)
   n <- 86L
   df <- data.frame(

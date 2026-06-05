@@ -41,7 +41,7 @@
 #'   compositional data.
 #' @export
 #' @examples
-#' if (requireNamespace("torch", quietly = TRUE)) {
+#' if (requireNamespace("torch", quietly = TRUE) && torch::torch_is_installed()) {
 #' \donttest{
 #'   set.seed(1)
 #'   x <- data.frame(a = runif(50, 5, 10), b = runif(50, 5, 10), c = runif(50, 5, 10))

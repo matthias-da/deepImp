@@ -42,7 +42,7 @@ test_that(".handle_deprecated_args passes genuine arch dots through untouched", 
 })
 
 test_that("impNNet end to end accepts deprecated dense with a warning", {
-  skip_if_not_installed("torch"); skip_if_not_installed("luz")
+  skip_if_no_torch()
   set.seed(1)
   df <- data.frame(a = rnorm(40), b = rnorm(40)); df$a[1:4] <- NA
   expect_warning(

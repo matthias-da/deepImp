@@ -28,7 +28,7 @@
 #' @seealso [deepimp_arch()], [getImputed()], [guessType()]
 #' @export
 #' @examples
-#' if (requireNamespace("torch", quietly = TRUE)) {
+#' if (requireNamespace("torch", quietly = TRUE) && torch::torch_is_installed()) {
 #' \donttest{
 #'   data(sleep, package = "VIM")
 #'   imp <- impNNet(sleep, arch = deepimp_arch_small(), epochs = 5, seed = 1)
