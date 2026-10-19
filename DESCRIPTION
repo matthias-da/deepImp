@@ -9,6 +9,8 @@ Description: Imputation of mixed-type and compositional data with neural network
     architecture (number and size of hidden layers, dropout, activation, optimiser) is
     user-configurable. See Templ (2021) <doi:10.1007/978-3-030-71175-7>.
 License: GPL-2
+URL: https://github.com/matthias-da/deepImp
+BugReports: https://github.com/matthias-da/deepImp/issues
 Encoding: UTF-8
 LazyData: TRUE
 ByteCompile: TRUE

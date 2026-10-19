@@ -7,3 +7,10 @@
 /Meta/
 *.tar.gz
 *.Rcheck
+.DS_Store
+# Local-only material: the private manuscript repo is cloned into paper/;
+# agent notes are symlinks into it.
+/paper/
+/CLAUDE.md
+/AGENTS.md
+/docs/
