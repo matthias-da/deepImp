@@ -53,3 +53,35 @@ test_that("keras backend honours arch depth/width without batchnorm/dropout", {
                    control = list(epochs = 5L, patience = 3L, batch_size = 16L, verbose = FALSE))
   expect_length(predict_model(b, fit$model, x), n)
 })
+
+test_that("keras offset head nests the GLM (parity with torch)", {
+  skip_if_no_keras()
+  set.seed(4)
+  x <- matrix(rnorm(100 * 2), ncol = 2); y <- 0.5 + x[, 1] - 2 * x[, 2] + rnorm(100)
+  b <- .backend("keras")
+  arch <- deepimp_arch_small(dropout = 0)
+  m <- build_model(b, "regression", 2L, 1L, arch)
+  fit <- fit_model(b, m, x[1:80, ], y[1:80], x[81:100, ], y[81:100],
+                   control = list(epochs = 0L))
+  expect_equal(fit$history$best_epoch, 0L)
+  g <- .glm_fit(x[1:80, ], y[1:80], "regression", ridge = arch$glm_ridge)
+  expect_equal(predict_model(b, fit$model, x[81:100, ]),
+               as.numeric(.glm_link(g, x[81:100, ])), tolerance = 1e-4)
+
+  yc <- ifelse(x[, 1] + rnorm(100) > 0, 2L, 1L)
+  mc <- build_model(b, "classification", 2L, 2L, arch)
+  fc <- fit_model(b, mc, x[1:80, ], yc[1:80], x[81:100, ], yc[81:100],
+                  control = list(epochs = 0L))
+  gc <- .glm_fit(x[1:80, ], yc[1:80], "classification", K = 2L, ridge = arch$glm_ridge)
+  eta <- .glm_link(gc, x[81:100, ])
+  expect_equal(unname(predict_model(b, fc$model, x[81:100, ])),
+               exp(eta) / rowSums(exp(eta)), tolerance = 1e-4)
+
+  # after training, validation loss is never worse than the GLM's
+  fit2 <- fit_model(b, build_model(b, "regression", 2L, 1L, arch),
+                    x[1:80, ], y[1:80], x[81:100, ], y[81:100],
+                    control = list(epochs = 20L, patience = 5L, batch_size = 16L))
+  mse_glm <- mean((as.numeric(.glm_link(g, x[81:100, ])) - y[81:100])^2)
+  mse_net <- mean((predict_model(b, fit2$model, x[81:100, ]) - y[81:100])^2)
+  expect_lte(mse_net, mse_glm + 1e-4)
+})

@@ -37,25 +37,35 @@ build_model.deepimp_backend_keras <- function(backend, task, input_dim,
     stop("backend 'keras' needs the keras3 package and a working Keras/TensorFlow ",
          "backend - install keras3 and run keras3::install_keras().", call. = FALSE)
   }
-  model <- keras3::keras_model_sequential(input_shape = as.integer(input_dim))
-  for (h in arch$hidden) {
-    model <- keras3::layer_dense(model, units = as.integer(h))
-    if (isTRUE(arch$batchnorm)) model <- keras3::layer_batch_normalization(model)
-    model <- .keras_add_activation(model, arch$activation)
-    if (arch$dropout > 0) model <- keras3::layer_dropout(model, rate = arch$dropout)
+  offset <- .use_glm_offset(arch, task, output_dim)
+  inp <- keras3::keras_input(shape = as.integer(input_dim))
+  h <- inp
+  for (u in arch$hidden) {
+    h <- keras3::layer_dense(h, units = as.integer(u))
+    if (isTRUE(arch$batchnorm)) h <- keras3::layer_batch_normalization(h)
+    h <- .keras_add_activation(h, arch$activation)
+    if (arch$dropout > 0) h <- keras3::layer_dropout(h, rate = arch$dropout)
+  }
+  # GLM offset: the link values arrive as a second input and are added before
+  # the softmax; the last layer starts at zero, so the untrained model is the GLM.
+  init <- if (offset) "zeros" else "glorot_uniform"
+  out <- keras3::layer_dense(h, units = as.integer(output_dim),
+                             kernel_initializer = init, bias_initializer = "zeros")
+  inputs <- inp
+  if (offset) {
+    off <- keras3::keras_input(shape = as.integer(output_dim))
+    out <- keras3::layer_add(list(out, off))
+    inputs <- list(inp, off)
   }
   if (task == "classification") {
-    model <- keras3::layer_dense(model, units = as.integer(output_dim), activation = "softmax")
-    keras3::compile(model, loss = "categorical_crossentropy",
-                    optimizer = .keras_optimizer(arch$optimizer, arch$learning_rate),
-                    metrics = "accuracy")
-  } else {
-    model <- keras3::layer_dense(model, units = 1L)
-    keras3::compile(model, loss = "mse",
-                    optimizer = .keras_optimizer(arch$optimizer, arch$learning_rate),
-                    metrics = "mae")
+    out <- keras3::layer_activation(out, activation = "softmax")
   }
-  list(model = model, task = task, output_dim = as.integer(output_dim))
+  model <- keras3::keras_model(inputs = inputs, outputs = out)
+  keras3::compile(model,
+                  loss = if (task == "classification") "categorical_crossentropy" else "mse",
+                  optimizer = .keras_optimizer(arch$optimizer, arch$learning_rate))
+  list(model = model, task = task, output_dim = as.integer(output_dim), arch = arch,
+       offset = offset)
 }
 
 #' @export
@@ -74,19 +84,47 @@ fit_model.deepimp_backend_keras <- function(backend, model, train_x, train_y,
     ytr <- as.numeric(train_y)
     yva <- as.numeric(valid_y)
   }
-
-  keras3::fit(model$model, x = as.matrix(train_x), y = ytr,
-              validation_data = list(as.matrix(valid_x), yva),
-              epochs = epochs, batch_size = batch_size, verbose = verbose,
-              callbacks = list(keras3::callback_early_stopping(
-                monitor = "val_loss", patience = patience)))
-
-  list(model = list(fitted = model$model, task = model$task), history = NULL)
+  xtr <- as.matrix(train_x); xva <- as.matrix(valid_x)
+  glm <- NULL
+  if (isTRUE(model$offset)) {
+    glm <- .glm_fit(xtr, train_y, model$task, model$output_dim, model$arch$glm_ridge)
+    xtr <- list(xtr, .glm_link(glm, xtr))
+    xva <- list(xva, .glm_link(glm, xva))
+  }
+  val_loss <- function() {
+    as.numeric(keras3::evaluate(model$model, x = xva, y = yva, verbose = 0L,
+                                return_dict = TRUE)$loss)
+  }
+  # Restore-best as in the torch backend: early stopping restores the best epoch,
+  # and for an offset head the untrained state (the GLM) competes as epoch 0.
+  init_w <- NULL; init_loss <- Inf
+  if (isTRUE(model$offset)) {
+    init_w <- keras3::get_weights(model$model); init_loss <- val_loss()
+  }
+  epochs_used <- 0L
+  if (epochs > 0L) {
+    hist <- keras3::fit(model$model, x = xtr, y = ytr, validation_data = list(xva, yva),
+                        epochs = as.integer(epochs), batch_size = as.integer(batch_size),
+                        verbose = verbose,
+                        callbacks = list(keras3::callback_early_stopping(
+                          monitor = "val_loss", patience = as.integer(patience),
+                          restore_best_weights = TRUE)))
+    epochs_used <- length(hist$metrics$val_loss)
+  }
+  best <- if (epochs > 0L) val_loss() else Inf
+  best_epoch <- NA_integer_
+  if (!is.null(init_w) && init_loss <= best) {
+    keras3::set_weights(model$model, init_w); best <- init_loss; best_epoch <- 0L
+  }
+  list(model = list(fitted = model$model, task = model$task, glm = glm),
+       history = list(epochs = epochs_used, best_epoch = best_epoch, best_valid = best))
 }
 
 #' @export
 predict_model.deepimp_backend_keras <- function(backend, model, newx, ...) {
-  raw <- stats::predict(model$fitted, as.matrix(newx), verbose = 0L)
+  x <- as.matrix(newx)
+  if (!is.null(model$glm)) x <- list(x, .glm_link(model$glm, x))
+  raw <- stats::predict(model$fitted, x, verbose = 0L)
   if (identical(model$task, "classification")) {
     return(as.matrix(raw))           # already softmax probabilities, n x K
   }
