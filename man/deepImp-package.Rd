@@ -22,6 +22,14 @@ Templ, M. (2021). Imputation of rounded zeros for compositional data using
 neural networks. In: Advances in Compositional Data Analysis (Festschrift).
 Springer. \doi{10.1007/978-3-030-71175-7}
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/matthias-da/deepImp}
+  \item Report bugs at \url{https://github.com/matthias-da/deepImp/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Matthias Templ \email{matthias.templ@gmail.com} (\href{https://orcid.org/0000-0002-8638-5276}{ORCID})
 
