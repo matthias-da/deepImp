@@ -43,8 +43,14 @@
 }
 
 # Impute the missing cells of column j given the currently filled frame.
+#   draw = "none"   : conditional mean (regression) / most probable class.
+#   draw = "pmm"    : predictive mean matching on the regression heads.
+#   draw = "normal" : prediction + N(0, sigma^2), sigma from held-out residuals.
+#   Any draw mode samples the classification heads from their softmax.
+#   bootstrap = TRUE: fit on a bootstrap resample, validate on out-of-bag rows.
 .impute_column <- function(j, filled, na_mask, types, arch, backend, control,
-                           normalize, validation_split) {
+                           normalize, validation_split, draw = "none",
+                           bootstrap = FALSE, pmm_k = 5L) {
   task <- .task_for_type(types[j])
   pred_types <- types[-j]
   obs  <- !na_mask[, j]
@@ -54,42 +60,53 @@
   test_enc <- .predictor_matrix(filled[miss, -j, drop = FALSE], pred_types,
                                 encoding = fit_enc$encoding)
 
-  # Seeded validation split (engine-side, so held-out rows are backend-independent).
-  n_obs <- nrow(fit_enc$x)
-  n_val <- max(1L, floor(validation_split * n_obs))
-  if (n_val >= n_obs) n_val <- max(1L, n_obs - 1L)
-  val_idx <- sample.int(n_obs, n_val)
-  tr_idx  <- setdiff(seq_len(n_obs), val_idx)
-  if (length(tr_idx) < 1L) { tr_idx <- seq_len(n_obs); val_idx <- seq_len(n_obs) }
+  # Seeded split (engine-side, so held-out rows are backend-independent).
+  sp <- .split_rows(nrow(fit_enc$x), validation_split, bootstrap)
+  tr_idx <- sp$train; val_idx <- sp$valid
+  xo <- fit_enc$x
 
   y <- filled[obs, j]
   if (task == "regression") {
     yv <- as.numeric(y); yc <- mean(yv); ys <- stats::sd(yv)
     if (!is.finite(ys) || ys == 0) ys <- 1
     ystd <- (yv - yc) / ys
-    model <- build_model(backend, task, ncol(fit_enc$x), 1L, arch)
+    model <- build_model(backend, task, ncol(xo), 1L, arch)
     fit <- fit_model(backend, model,
-                     fit_enc$x[tr_idx, , drop = FALSE], ystd[tr_idx],
-                     fit_enc$x[val_idx, , drop = FALSE], ystd[val_idx], control)
+                     xo[tr_idx, , drop = FALSE], ystd[tr_idx],
+                     xo[val_idx, , drop = FALSE], ystd[val_idx], control)
     pred <- predict_model(backend, fit$model, test_enc$x) * ys + yc
+    if (draw == "pmm") {
+      po <- predict_model(backend, fit$model, xo) * ys + yc
+      return(.pmm_draw(pred, po, yv, pmm_k))
+    }
+    if (draw == "normal") {
+      pv <- predict_model(backend, fit$model, xo[val_idx, , drop = FALSE]) * ys + yc
+      sigma <- sqrt(mean((yv[val_idx] - pv)^2))
+      pred <- pred + stats::rnorm(length(pred), 0, sigma)
+    }
     if (types[j] == "count") pred <- pmax(0, round(pred))
     pred
   } else {
     yf <- factor(y); levs <- levels(yf); codes <- as.integer(yf)
-    model <- build_model(backend, task, ncol(fit_enc$x), length(levs), arch)
+    model <- build_model(backend, task, ncol(xo), length(levs), arch)
     fit <- fit_model(backend, model,
-                     fit_enc$x[tr_idx, , drop = FALSE], codes[tr_idx],
-                     fit_enc$x[val_idx, , drop = FALSE], codes[val_idx], control)
+                     xo[tr_idx, , drop = FALSE], codes[tr_idx],
+                     xo[val_idx, , drop = FALSE], codes[val_idx], control)
     probs <- predict_model(backend, fit$model, test_enc$x)
-    levs[max.col(probs, ties.method = "first")]
+    if (draw == "none") return(levs[max.col(probs, ties.method = "first")])
+    levs[.sample_classes(probs)]
   }
 }
 
-# Chained imputation: m replicates -> iterations -> columns -> convergence check.
+# Chained imputation: m replicates -> sweeps -> columns. With early_stop = TRUE
+# (point mode) a replicate stops once the pooled change falls below `eps`; in
+# draw mode every replicate runs all `iterations` sweeps. Per sweep the mean and
+# SD of the imputed cells of every incomplete variable are kept (the trace).
 .run_chain <- function(x, types, arch, backend, initialize = "knn", iterations = 3L,
                        m = 1L, eps = 1e-2, normalize = TRUE, control = list(),
                        validation_split = 0.2, seed = NULL, verbose = FALSE,
-                       column_fn = .impute_column, column_args = list()) {
+                       column_fn = .impute_column, column_args = list(),
+                       early_stop = TRUE) {
   na_mask <- is.na(x)
   start <- .initialize_na(x, initialize)
   cols <- which(colSums(na_mask) > 0)
@@ -97,6 +114,9 @@
   imputed <- vector("list", m)
   conv    <- vector("list", m)
   seeds   <- integer(m)
+  tr_dim  <- list(names(x)[cols], NULL, NULL)
+  tr_mean <- array(NA_real_, c(length(cols), iterations, m), dimnames = tr_dim)
+  tr_sd   <- tr_mean
 
   for (rep_i in seq_len(m)) {
     seeds[rep_i] <- if (is.null(seed)) NA_integer_ else as.integer(seed + rep_i - 1L)
@@ -124,13 +144,19 @@
                                normalize, validation_split), column_args))
         filled[[j]] <- .write_back(filled[[j]], na_mask[, j], vals)
       }
+      if (length(cols)) {
+        st <- .chain_stats(filled, na_mask, cols)
+        tr_mean[, it, rep_i] <- st$mean
+        tr_sd[, it, rep_i]   <- st$sd
+      }
       ch <- .convergence(old, filled, na_mask, types)
       changes <- c(changes, ch)
-      if (ch < eps) break
+      if (early_stop && ch < eps) break
     }
     imputed[[rep_i]] <- filled
     conv[[rep_i]] <- changes
   }
 
-  list(imputed = imputed, convergence = conv, seeds = seeds, na_mask = na_mask)
+  list(imputed = imputed, convergence = conv, seeds = seeds, na_mask = na_mask,
+       trace = list(mean = tr_mean, sd = tr_sd))
 }

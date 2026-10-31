@@ -11,7 +11,7 @@ impNNet(
   backend = c("torch", "keras"),
   vartypes = "guess",
   initialize = "knn",
-  iterations = 3L,
+  iterations = NULL,
   eps = 0.01,
   normalize = TRUE,
   epochs = 400L,
@@ -20,6 +20,9 @@ impNNet(
   batch_size = 32L,
   seed = NULL,
   verbose = FALSE,
+  draw = c("none", "pmm", "normal"),
+  bootstrap = NULL,
+  pmm_k = 5L,
   ...
 )
 }
@@ -29,9 +32,8 @@ impNNet(
 \item{arch}{a \code{\link[=deepimp_arch]{deepimp_arch()}} object, or \code{NULL} to build one from \code{...}.
 Supplying both \code{arch} and architecture scalars via \code{...} is an error.}
 
-\item{m}{number of stochastic replicate completions. NOTE: with \code{m > 1} these
-are stochastic replicate completions, \strong{not} valid multiple imputation
-(no Rubin-rule inference).}
+\item{m}{number of completed data sets (replicates). See "Point mode and
+draw mode": only draw-mode replicates are multiple imputations.}
 
 \item{backend}{\code{"torch"} (default) or \code{"keras"} (optional; requires the
 keras3 package and a working Keras/TensorFlow backend).}
@@ -40,13 +42,17 @@ keras3 package and a working Keras/TensorFlow backend).}
 
 \item{initialize}{starting values for NAs: \code{"knn"}, \code{"mean"}, or \code{"hotdeck"}.}
 
-\item{iterations}{maximum number of chained sweeps.}
+\item{iterations}{number of chained sweeps: the maximum in point mode
+(default 3), the fixed number in draw mode (default 5). \code{NULL} picks the
+default of the mode.}
 
-\item{eps}{convergence tolerance on the standardised mean change.}
+\item{eps}{convergence tolerance on the standardised mean change (point mode
+only).}
 
 \item{normalize}{standardise numeric predictors.}
 
-\item{epochs, patience, validation_split, batch_size}{training controls.}
+\item{epochs, patience, validation_split, batch_size}{training controls.
+\code{validation_split} is not used when \code{bootstrap = TRUE}.}
 
 \item{seed}{optional integer seed (sets the R and backend RNGs). Exact
 reproducibility is guaranteed when \code{dropout = 0}; with \code{dropout > 0} the
@@ -54,6 +60,16 @@ backend's training-time mask sampling is not fully pinned by the seed in the
 current torch build, so repeated runs are close but may not be bit-identical.}
 
 \item{verbose}{print progress.}
+
+\item{draw}{\code{"none"} (point imputation, default), \code{"pmm"} (predictive mean
+matching) or \code{"normal"} (prediction plus normal noise). Any draw mode
+samples the classification heads from their softmax.}
+
+\item{bootstrap}{logical; fit every column model on a bootstrap resample of
+the observed rows, with the out-of-bag rows as the validation set. Defaults
+to \code{TRUE} in draw mode and \code{FALSE} in point mode.}
+
+\item{pmm_k}{number of donors for \code{draw = "pmm"}.}
 
 \item{...}{architecture scalar overrides forwarded to \code{\link[=deepimp_arch]{deepimp_arch()}}.}
 }
@@ -64,12 +80,38 @@ a \code{"deepimp"} object; read the data with \code{\link[=getImputed]{getImpute
 Iterative, chained imputation of numeric, count, semi-continuous, binary and
 nominal variables with a configurable multilayer perceptron (torch backend).
 }
+\section{Point mode and draw mode}{
+
+With \code{draw = "none"} (point mode) every missing cell gets the network's
+conditional mean (regression heads) or its most probable class
+(classification heads), and the chain stops once the pooled change falls
+below \code{eps}. Point imputations suit prediction-type use, but replicates
+(\code{m > 1}) then differ only by retraining, so they understate the imputation
+uncertainty and must not be pooled with Rubin's rules.
+
+With \code{draw = "pmm"} or \code{"normal"} (draw mode) every missing cell gets a draw
+from the predictive distribution, and by default (\code{bootstrap = TRUE}) every
+fit uses a bootstrap resample of the observed rows. The classification heads
+then sample from their softmax probabilities. Each replicate runs all
+\code{iterations} sweeps. The \code{m} completed data sets are multiple imputations
+that can be analysed and pooled with Rubin's rules.
+PMM copies observed values, so it keeps count and semi-continuous variables
+on their observed support; \code{"normal"} adds Gaussian noise with the residual
+SD of the held-out (out-of-bag) rows and suits continuous variables. For
+exactly reproducible draws use \code{dropout = 0}.
+}
+
 \examples{
 if (requireNamespace("torch", quietly = TRUE) && torch::torch_is_installed()) {
 \donttest{
   data(sleep, package = "VIM")
   imp <- impNNet(sleep, arch = deepimp_arch_small(), epochs = 5, seed = 1)
   head(getImputed(imp))
+
+  # multiple imputation: predictive draws on bootstrap fits
+  mi <- impNNet(sleep, arch = deepimp_arch_small(dropout = 0), m = 3,
+                draw = "pmm", iterations = 2, epochs = 5, seed = 1)
+  length(getImputed(mi, m = "all"))
 }
 }
 }

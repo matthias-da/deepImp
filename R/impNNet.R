@@ -3,20 +3,49 @@
 #' Iterative, chained imputation of numeric, count, semi-continuous, binary and
 #' nominal variables with a configurable multilayer perceptron (torch backend).
 #'
+#' @section Point mode and draw mode:
+#' With `draw = "none"` (point mode) every missing cell gets the network's
+#' conditional mean (regression heads) or its most probable class
+#' (classification heads), and the chain stops once the pooled change falls
+#' below `eps`. Point imputations suit prediction-type use, but replicates
+#' (`m > 1`) then differ only by retraining, so they understate the imputation
+#' uncertainty and must not be pooled with Rubin's rules.
+#'
+#' With `draw = "pmm"` or `"normal"` (draw mode) every missing cell gets a draw
+#' from the predictive distribution, and by default (`bootstrap = TRUE`) every
+#' fit uses a bootstrap resample of the observed rows. The classification heads
+#' then sample from their softmax probabilities. Each replicate runs all
+#' `iterations` sweeps. The `m` completed data sets are multiple imputations
+#' that can be analysed and pooled with Rubin's rules.
+#' PMM copies observed values, so it keeps count and semi-continuous variables
+#' on their observed support; `"normal"` adds Gaussian noise with the residual
+#' SD of the held-out (out-of-bag) rows and suits continuous variables. For
+#' exactly reproducible draws use `dropout = 0`.
+#'
 #' @param data a data.frame (tibbles/data.tables are coerced).
 #' @param arch a [deepimp_arch()] object, or `NULL` to build one from `...`.
 #'   Supplying both `arch` and architecture scalars via `...` is an error.
-#' @param m number of stochastic replicate completions. NOTE: with `m > 1` these
-#'   are stochastic replicate completions, **not** valid multiple imputation
-#'   (no Rubin-rule inference).
+#' @param m number of completed data sets (replicates). See "Point mode and
+#'   draw mode": only draw-mode replicates are multiple imputations.
 #' @param backend `"torch"` (default) or `"keras"` (optional; requires the
 #'   keras3 package and a working Keras/TensorFlow backend).
 #' @param vartypes `"guess"` (use [guessType()]) or a length-`ncol(data)` vector.
 #' @param initialize starting values for NAs: `"knn"`, `"mean"`, or `"hotdeck"`.
-#' @param iterations maximum number of chained sweeps.
-#' @param eps convergence tolerance on the standardised mean change.
+#' @param iterations number of chained sweeps: the maximum in point mode
+#'   (default 3), the fixed number in draw mode (default 5). `NULL` picks the
+#'   default of the mode.
+#' @param eps convergence tolerance on the standardised mean change (point mode
+#'   only).
+#' @param draw `"none"` (point imputation, default), `"pmm"` (predictive mean
+#'   matching) or `"normal"` (prediction plus normal noise). Any draw mode
+#'   samples the classification heads from their softmax.
+#' @param bootstrap logical; fit every column model on a bootstrap resample of
+#'   the observed rows, with the out-of-bag rows as the validation set. Defaults
+#'   to `TRUE` in draw mode and `FALSE` in point mode.
+#' @param pmm_k number of donors for `draw = "pmm"`.
 #' @param normalize standardise numeric predictors.
 #' @param epochs,patience,validation_split,batch_size training controls.
+#'   `validation_split` is not used when `bootstrap = TRUE`.
 #' @param seed optional integer seed (sets the R and backend RNGs). Exact
 #'   reproducibility is guaranteed when `dropout = 0`; with `dropout > 0` the
 #'   backend's training-time mask sampling is not fully pinned by the seed in the
@@ -33,15 +62,30 @@
 #'   data(sleep, package = "VIM")
 #'   imp <- impNNet(sleep, arch = deepimp_arch_small(), epochs = 5, seed = 1)
 #'   head(getImputed(imp))
+#'
+#'   # multiple imputation: predictive draws on bootstrap fits
+#'   mi <- impNNet(sleep, arch = deepimp_arch_small(dropout = 0), m = 3,
+#'                 draw = "pmm", iterations = 2, epochs = 5, seed = 1)
+#'   length(getImputed(mi, m = "all"))
 #' }
 #' }
 impNNet <- function(data, arch = NULL, m = 1L, backend = c("torch", "keras"),
-                    vartypes = "guess", initialize = "knn", iterations = 3L,
+                    vartypes = "guess", initialize = "knn", iterations = NULL,
                     eps = 1e-2, normalize = TRUE, epochs = 400L, patience = 40L,
                     validation_split = 0.2, batch_size = 32L, seed = NULL,
-                    verbose = FALSE, ...) {
+                    verbose = FALSE, draw = c("none", "pmm", "normal"),
+                    bootstrap = NULL, pmm_k = 5L, ...) {
   data <- as.data.frame(data)
   backend_name <- match.arg(backend)
+  draw <- match.arg(draw)
+  draw_mode <- draw != "none"
+  if (is.null(iterations)) iterations <- if (draw_mode) 5L else 3L
+  if (is.null(bootstrap)) bootstrap <- draw_mode
+  if (!is.logical(bootstrap) || length(bootstrap) != 1L || is.na(bootstrap))
+    stop("`bootstrap` must be TRUE or FALSE.", call. = FALSE)
+  if (!is.numeric(pmm_k) || length(pmm_k) != 1L || !is.finite(pmm_k) || pmm_k < 1 ||
+      pmm_k != round(pmm_k))
+    stop("`pmm_k` must be a positive integer.", call. = FALSE)
 
   dots <- list(...)
   dep <- .handle_deprecated_args(dots, arch, normalize)
@@ -69,12 +113,17 @@ impNNet <- function(data, arch = NULL, m = 1L, backend = c("torch", "keras"),
                     backend = .backend(backend_name), initialize = initialize,
                     iterations = iterations, m = m, eps = eps, normalize = normalize,
                     control = control, validation_split = validation_split,
-                    seed = seed, verbose = verbose)
+                    seed = seed, verbose = verbose,
+                    column_args = list(draw = draw, bootstrap = bootstrap,
+                                       pmm_k = as.integer(pmm_k)),
+                    early_stop = !draw_mode)
 
   new_deepimp(
     data = data, imputed = res$imputed, arch = arch,
-    info = list(backend = backend_name, vartypes = vartypes,
-                convergence = res$convergence, seeds = res$seeds,
+    info = list(backend = backend_name, vartypes = vartypes, draw = draw,
+                bootstrap = bootstrap, pmm_k = as.integer(pmm_k),
+                iterations = iterations, convergence = res$convergence,
+                trace = res$trace, seeds = res$seeds,
                 n_missing = sum(res$na_mask))
   )
 }

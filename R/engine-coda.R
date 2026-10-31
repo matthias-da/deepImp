@@ -74,12 +74,8 @@ NULL
   yc <- mean(yobs); ys <- stats::sd(yobs); if (!is.finite(ys) || ys == 0) ys <- 1
   ystd <- (yobs - yc) / ys
 
-  n_obs <- nrow(Xobs)
-  n_val <- max(1L, floor(validation_split * n_obs))
-  if (n_val >= n_obs) n_val <- max(1L, n_obs - 1L)
-  val_idx <- sample.int(n_obs, n_val)
-  tr_idx  <- setdiff(seq_len(n_obs), val_idx)
-  if (length(tr_idx) < 1L) { tr_idx <- seq_len(n_obs); val_idx <- seq_len(n_obs) }
+  sp <- .split_rows(nrow(Xobs), validation_split)
+  tr_idx <- sp$train; val_idx <- sp$valid
 
   model <- build_model(backend, "regression", ncol(Xobs), 1L, arch)
   fit <- fit_model(backend, model,
