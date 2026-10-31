@@ -28,7 +28,6 @@ fake_deepimp <- function() {
 
 skip_if_no_torch <- function() {
   testthat::skip_if_not_installed("torch")
-  testthat::skip_if_not_installed("luz")
   ok <- tryCatch(isTRUE(torch::torch_is_installed()), error = function(e) FALSE)
   if (!ok) testthat::skip("libtorch (Lantern) runtime not installed")
 }

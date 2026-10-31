@@ -2,9 +2,10 @@
 % Please edit documentation in R/backend-torch.R
 \name{backend-torch}
 \alias{backend-torch}
-\title{torch/luz backend for deepImp}
+\title{torch backend for deepImp}
 \description{
 Internal backend implementing the deepImp model seam (build/fit/predict) with
-torch and luz. Not called directly by users.
+torch and a plain training loop on preloaded tensors. Not called directly by
+users.
 }
 \keyword{internal}

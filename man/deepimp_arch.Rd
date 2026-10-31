@@ -11,7 +11,9 @@ deepimp_arch(
   activation = "relu",
   batchnorm = TRUE,
   optimizer = "adam",
-  learning_rate = 0.001
+  learning_rate = 0.001,
+  glm_offset = TRUE,
+  glm_ridge = 0.001
 )
 
 deepimp_arch_small(
@@ -19,7 +21,9 @@ deepimp_arch_small(
   activation = "relu",
   batchnorm = TRUE,
   optimizer = "adam",
-  learning_rate = 0.001
+  learning_rate = 0.001,
+  glm_offset = TRUE,
+  glm_ridge = 0.001
 )
 }
 \arguments{
@@ -35,6 +39,20 @@ deepimp_arch_small(
 \item{optimizer}{one of \code{"adam"}, \code{"sgd"}, \code{"rmsprop"}.}
 
 \item{learning_rate}{positive learning rate for the optimiser.}
+
+\item{glm_offset}{logical; if \code{TRUE} (default), every network head is a
+generalised linear model plus an MLP correction: a linear model under the
+regression heads and a multinomial logit (via \code{\link[nnet:multinom]{nnet::multinom()}}) under the
+classification heads, both fitted on the training rows of each fit. The
+last MLP layer starts at zero and the untrained state competes in the
+restore-best step, so the head nests the GLM and the network only has to
+learn what the GLM misses (nonlinearity, interactions). \code{FALSE} gives the
+plain MLP of deepImp 1.1.0.}
+
+\item{glm_ridge}{non-negative ridge penalty of the GLM offset (ridge on the
+least-squares fit, intercept unpenalised; \code{decay} of \code{\link[nnet:multinom]{nnet::multinom()}}).
+A small guard against separation, rare levels and nearly as many
+predictors as rows; it is negligible otherwise.}
 }
 \value{
 an object of class \code{"deepimp_arch"}.

@@ -1,7 +1,7 @@
 Package: deepImp
 Type: Package
 Title: Imputation with Deep Learning Methods
-Version: 1.1.0
+Version: 1.1.0.9000
 Authors@R: c(
   person("Matthias", "Templ", email = "matthias.templ@gmail.com",
          role = c("aut", "cre"), comment = c(ORCID = "0000-0002-8638-5276")))
@@ -18,7 +18,7 @@ Depends:
     R (>= 4.1)
 Imports:
     torch,
-    luz,
+    nnet,
     VIM,
     robCompositions,
     stats,

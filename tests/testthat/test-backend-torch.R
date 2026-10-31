@@ -51,13 +51,11 @@ test_that("torch backend builds, fits, and predicts for classification", {
   expect_true(all(abs(rowSums(probs) - 1) < 1e-5))
 })
 
-test_that("singleton final training batch does not empty the validation loader (early-stopping safe)", {
+test_that("a singleton final training batch is skipped, not fed to batch norm", {
   skip_if_no_torch()
   set.seed(11); torch::torch_manual_seed(11)
-  # n_train = 33, batch_size = 32 -> 33 %% 32 == 1 would, under a shared drop_last,
-  # also drop the single validation batch and crash luz early stopping. The backend
-  # must instead shrink the batch size so training keeps a non-singleton last batch
-  # and the validation loss is still computed.
+  # n_train = 33, batch_size = 32 -> the last minibatch has one row, which would
+  # break nn_batch_norm1d. The training loop skips it; validation is unaffected.
   x <- matrix(rnorm(33 * 3), ncol = 3); y <- x[, 1] - x[, 2]
   xv <- matrix(rnorm(10 * 3), ncol = 3); yv <- xv[, 1] - xv[, 2]
   b <- .backend("torch")
@@ -84,4 +82,20 @@ test_that("impNNet imputes a small mixed-type frame end to end (beer-like, regre
     imp <- impNNet(df, arch = deepimp_arch_small(), epochs = 20L, seed = 1)
   )
   expect_false(anyNA(getImputed(imp)))
+})
+
+test_that("torch fit reports its history and restores the best weights", {
+  skip_if_no_torch()
+  set.seed(3); torch::torch_manual_seed(3)
+  x <- matrix(rnorm(120 * 2), ncol = 2); y <- x[, 1] + rnorm(120, sd = 0.3)
+  b <- .backend("torch")
+  m <- build_model(b, "regression", 2L, 1L, deepimp_arch_small(dropout = 0))
+  fit <- fit_model(b, m, x[1:90, ], y[1:90], x[91:120, ], y[91:120],
+                   control = list(epochs = 30L, patience = 5L, batch_size = 16L))
+  h <- fit$history
+  expect_true(h$epochs >= 1L && h$epochs <= 30L)
+  expect_true(h$best_epoch >= 0L && h$best_epoch <= h$epochs)
+  p <- predict_model(b, fit$model, x[91:120, ])
+  # the restored weights are the ones that scored best_valid
+  expect_equal(mean((p - y[91:120])^2), h$best_valid, tolerance = 1e-5)
 })
