@@ -142,3 +142,15 @@ test_that("point mode with an offset head still stops on eps and returns a trace
   expect_length(imp$info$convergence[[1]], 1L)          # eps = Inf stops after sweep 1
   expect_true(all(is.na(imp$info$trace$mean[, 2:4, 1])))
 })
+
+test_that("draw-mode imputations pool through as_mids() and mice", {
+  skip_if_no_torch()
+  skip_if_not_installed("mice")
+  d <- mixed_frame(n = 100L)
+  imp <- impNNet(d, arch = deepimp_arch(hidden = c(8), dropout = 0), m = 3L,
+                 draw = "pmm", iterations = 1L, epochs = 3L, seed = 5)
+  pooled <- summary(mice::pool(with(as_mids(imp), lm(y ~ x1 + x2 + g))))
+  expect_true(all(is.finite(pooled$std.error)))
+  pdf(NULL); on.exit(dev.off())
+  expect_invisible(plot(imp, type = "trace"))
+})

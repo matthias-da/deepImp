@@ -16,7 +16,8 @@
 #' fit uses a bootstrap resample of the observed rows. The classification heads
 #' then sample from their softmax probabilities. Each replicate runs all
 #' `iterations` sweeps. The `m` completed data sets are multiple imputations
-#' that can be analysed and pooled with Rubin's rules.
+#' that can be analysed and pooled with Rubin's rules, e.g. with
+#' `mice::pool()` via [as_mids()].
 #' PMM copies observed values, so it keeps count and semi-continuous variables
 #' on their observed support; `"normal"` adds Gaussian noise with the residual
 #' SD of the held-out (out-of-bag) rows and suits continuous variables. For
@@ -54,7 +55,7 @@
 #' @param ... architecture scalar overrides forwarded to [deepimp_arch()].
 #' @return a `"deepimp"` object; read the data with [getImputed()].
 #' @author Matthias Templ
-#' @seealso [deepimp_arch()], [getImputed()], [guessType()]
+#' @seealso [deepimp_arch()], [getImputed()], [as_mids()], [guessType()]
 #' @export
 #' @examples
 #' if (requireNamespace("torch", quietly = TRUE) && torch::torch_is_installed()) {
@@ -66,7 +67,7 @@
 #'   # multiple imputation: predictive draws on bootstrap fits
 #'   mi <- impNNet(sleep, arch = deepimp_arch_small(dropout = 0), m = 3,
 #'                 draw = "pmm", iterations = 2, epochs = 5, seed = 1)
-#'   length(getImputed(mi, m = "all"))
+#'   head(getImputed(mi, m = "long"))
 #' }
 #' }
 impNNet <- function(data, arch = NULL, m = 1L, backend = c("torch", "keras"),

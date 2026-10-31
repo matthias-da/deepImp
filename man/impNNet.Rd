@@ -94,7 +94,8 @@ from the predictive distribution, and by default (\code{bootstrap = TRUE}) every
 fit uses a bootstrap resample of the observed rows. The classification heads
 then sample from their softmax probabilities. Each replicate runs all
 \code{iterations} sweeps. The \code{m} completed data sets are multiple imputations
-that can be analysed and pooled with Rubin's rules.
+that can be analysed and pooled with Rubin's rules, e.g. with
+\code{mice::pool()} via \code{\link[=as_mids]{as_mids()}}.
 PMM copies observed values, so it keeps count and semi-continuous variables
 on their observed support; \code{"normal"} adds Gaussian noise with the residual
 SD of the held-out (out-of-bag) rows and suits continuous variables. For
@@ -111,12 +112,12 @@ if (requireNamespace("torch", quietly = TRUE) && torch::torch_is_installed()) {
   # multiple imputation: predictive draws on bootstrap fits
   mi <- impNNet(sleep, arch = deepimp_arch_small(dropout = 0), m = 3,
                 draw = "pmm", iterations = 2, epochs = 5, seed = 1)
-  length(getImputed(mi, m = "all"))
+  head(getImputed(mi, m = "long"))
 }
 }
 }
 \seealso{
-\code{\link[=deepimp_arch]{deepimp_arch()}}, \code{\link[=getImputed]{getImputed()}}, \code{\link[=guessType]{guessType()}}
+\code{\link[=deepimp_arch]{deepimp_arch()}}, \code{\link[=getImputed]{getImputed()}}, \code{\link[=as_mids]{as_mids()}}, \code{\link[=guessType]{guessType()}}
 }
 \author{
 Matthias Templ

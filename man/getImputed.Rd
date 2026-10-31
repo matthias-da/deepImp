@@ -9,9 +9,12 @@ getImputed(object, m = 1L, ...)
 \arguments{
 \item{object}{a \code{"deepimp"} object from \code{\link[=impNNet]{impNNet()}}.}
 
-\item{m}{which completed dataset to return: an integer index, or \code{"all"} for
-the list of all imputations. With \code{m > 1} the datasets are stochastic
-replicate completions, \strong{not} valid multiple imputation.}
+\item{m}{which completed dataset to return: an integer index, \code{"all"} for
+the list of all imputations, or \code{"long"} for all of them stacked in one
+data.frame in the \code{mice} long format (columns \code{.imp} and \code{.id}; \code{.imp = 0}
+holds the incomplete data). Only draw-mode replicates
+(\code{impNNet(draw = "pmm")} or \code{"normal"}) are multiple imputations; see
+\code{\link[=impNNet]{impNNet()}}.}
 
 \item{...}{unused.}
 }
@@ -22,5 +25,5 @@ a data.frame, or a list of data.frames when \code{m = "all"}.
 Extract imputed data from a deepimp object
 }
 \seealso{
-\code{\link[=impNNet]{impNNet()}}
+\code{\link[=impNNet]{impNNet()}}, \code{\link[=as_mids]{as_mids()}}
 }
